@@ -6,15 +6,6 @@
  */
 
 #include <hall_sensor.h>
-
-#define TSCTR_PER_SEC 200000000
-typedef char byte;
-
-typedef struct {
-    byte hu;
-    byte hv;
-    byte hw;
-}Commutation_state ;
 Commutation_state commutation;
 
 enum edge_event{rising=0, falling=1};
@@ -52,7 +43,6 @@ interrupt void ecap3_isr(){
 interrupt void ecap4_isr(){
     // HU falling
     volatile struct ECAP_REGS* ecap = &ECap4Regs;
-    test = ecap->CAP1;
     commutation.hu = 0;
     end_of_eCAP_INT(ecap);
 }
@@ -67,6 +57,31 @@ interrupt void ecap6_isr(){
     volatile struct ECAP_REGS* ecap = &ECap6Regs;
     commutation.hw = 0;
     end_of_eCAP_INT(ecap);
+}
+void configure_eCAP_INT(){
+    // enroll interrupt service routine for eCAP
+    EALLOW;
+    // rising edge capture
+    PieVectTable.ECAP1_INT = ecap1_isr;
+    PieVectTable.ECAP2_INT = ecap2_isr;
+    PieVectTable.ECAP3_INT = ecap3_isr;
+    // falling edge capture
+    PieVectTable.ECAP4_INT = ecap4_isr;
+    PieVectTable.ECAP5_INT = ecap5_isr;
+    PieVectTable.ECAP6_INT = ecap6_isr;
+
+    //enable ECAP 1,2,3 interrupt
+    IER |= M_INT4;
+    // rising edge capture
+    PieCtrlRegs.PIEIER4.bit.INTx1 = 1;
+    PieCtrlRegs.PIEIER4.bit.INTx2 = 1;
+    PieCtrlRegs.PIEIER4.bit.INTx3 = 1;
+    // falling edge capture
+    PieCtrlRegs.PIEIER4.bit.INTx4 = 1;
+    PieCtrlRegs.PIEIER4.bit.INTx5 = 1;
+    PieCtrlRegs.PIEIER4.bit.INTx6 = 1;
+    EDIS;
+
 }
 
 void configure_eCAP(volatile struct ECAP_REGS* eCAP, int edge_event){
@@ -101,7 +116,6 @@ void start_eCAP(volatile struct ECAP_REGS* eCAP){
     eCAP->ECEINT.bit.CEVT2 = 0;
     eCAP->ECEINT.bit.CEVT4 = 0;
     eCAP->ECEINT.bit.CEVT3 = 0;
-
 }
 
 void Init_hall_sensor_ECAP(Uint16 poll_pair){
@@ -136,40 +150,19 @@ void Init_hall_sensor_ECAP(Uint16 poll_pair){
     InputXbarRegs.INPUT11SELECT = 22;// eCAP5 to HV
     InputXbarRegs.INPUT12SELECT = 105;// eCAP6 to HW
 
-    // enroll interrupt service routine for eCAP
-    EALLOW;
-    // rising edge capture
-    PieVectTable.ECAP1_INT = ecap1_isr;
-    PieVectTable.ECAP2_INT = ecap2_isr;
-    PieVectTable.ECAP3_INT = ecap3_isr;
-    // falling edge capture
-    PieVectTable.ECAP4_INT = ecap4_isr;
-    PieVectTable.ECAP5_INT = ecap5_isr;
-    PieVectTable.ECAP6_INT = ecap6_isr;
-    EDIS;
-
-    //enable ECAP 1,2,3 interrupt
-    IER |= M_INT4;
-    // rising edge capture
-    PieCtrlRegs.PIEIER4.bit.INTx1 = 1;
-    PieCtrlRegs.PIEIER4.bit.INTx2 = 1;
-    PieCtrlRegs.PIEIER4.bit.INTx3 = 1;
-    // falling edge capture
-    PieCtrlRegs.PIEIER4.bit.INTx4 = 1;
-    PieCtrlRegs.PIEIER4.bit.INTx5 = 1;
-    PieCtrlRegs.PIEIER4.bit.INTx6 = 1;
-
     // Configure eCAP
     //initialize unused GPIO PIN to synchronize ECAP
-    GpioCtrlRegs.GPBGMUX2.bit.GPIO61 = 0; // use GPIO60 as gpio
-    GpioCtrlRegs.GPBMUX2.bit.GPIO61 = 0;
-    GpioCtrlRegs.GPBDIR.bit.GPIO61 = 1; // GPIO FOR OUTPUT
-    GpioDataRegs.GPBCLEAR.bit.GPIO61 = 1; // WRIE 0 TO GPIO 61
+    GpioCtrlRegs.GPBGMUX2.bit.GPIO59 = 0; // use GPIO60 as gpio
+    GpioCtrlRegs.GPBMUX2.bit.GPIO59 = 0;
+    GpioCtrlRegs.GPBDIR.bit.GPIO59 = 1; // GPIO FOR OUTPUT
+    GpioDataRegs.GPBCLEAR.bit.GPIO59 = 1; // WRIE 0 TO GPIO 61
 
-    InputXbarRegs.INPUT14SELECT = 61;
+    InputXbarRegs.INPUT6SELECT = 59;
 
-    SyncSocRegs.SYNCSELECT.bit.ECAP1SYNCIN = 5; // EXTSYNCIN1 is selected for SYNCIN of ECAP1
-    SyncSocRegs.SYNCSELECT.bit.ECAP4SYNCIN = 5; // ECAP1SYNCOUT is selected for SYNCIN of ECAP4
+    SyncSocRegs.SYNCSELECT.bit.ECAP1SYNCIN = 0; // EXTSYNCIN1 is selected for SYNCIN of ECAP1
+    SyncSocRegs.SYNCSELECT.bit.ECAP4SYNCIN = 0; // EXTSYNCIN1 is selected for SYNCIN of ECAP4
+
+    configure_eCAP_INT();
     configure_eCAP(&ECap1Regs,rising);
     configure_eCAP(&ECap2Regs,rising);
     configure_eCAP(&ECap3Regs,rising);
@@ -188,12 +181,12 @@ void Start_hall_sensor_ECAP(){
     // synchronize eCAP 1,2,3 and 4,5,6
     // SYNCIN of eCAP 2,3 is the SYNCOUT of eCAP1
     // SYNCIN OF eCAP 5,6 is the SYNCOUT of eCAP1
-    ECap6Regs.ECCTL2.bit.SWSYNC = 0;
-    ECap5Regs.ECCTL2.bit.SWSYNC = 0;
-    ECap3Regs.ECCTL2.bit.SWSYNC = 0;
-    ECap2Regs.ECCTL2.bit.SWSYNC = 0;
-    ECap1Regs.ECCTL2.bit.SWSYNC = 1;
-    ECap4Regs.ECCTL2.bit.SWSYNC = 1;
+
+    // Send SYNC Signal to ECAPs
+    //GpioDataRegs.GPBSET.bit.GPIO59 = 1;
+    EPwm1Regs.TBCTL.bit.PHSEN = 0;
+    EPwm1Regs.TBCTL.bit.SWFSYNC = 1;
+    EPwm1Regs.TBCTL.bit.PHSEN = 1;
 
     ECap1Regs.ECCTL2.bit.SYNCI_EN = 0;
     ECap2Regs.ECCTL2.bit.SYNCI_EN = 0;
@@ -201,7 +194,9 @@ void Start_hall_sensor_ECAP(){
     ECap4Regs.ECCTL2.bit.SYNCI_EN = 0;
     ECap5Regs.ECCTL2.bit.SYNCI_EN = 0;
     ECap6Regs.ECCTL2.bit.SYNCI_EN = 0;
-
+}
+Commutation_state hall_sensor_get_commutation(){
+    return commutation;
 }
 
 

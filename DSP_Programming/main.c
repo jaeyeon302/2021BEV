@@ -8,16 +8,23 @@
  *
  */
 #include "hall_sensor.h"
-
+#include "pwm_run.h"
+/*
 interrupt void epwm1_isr(void){
     EPwm1Regs.ETCLR.bit.INT=1; //clear
     PieCtrlRegs.PIEACK.all |= PIEACK_GROUP3;
+}*/
+
+interrupt void timer0_isr(){
+    CpuTimer0.InterruptCount++;
+    GpioDataRegs.GPATOGGLE.bit.GPIO31 = 1; //flip the led state
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; // clear PIEACK.1 == PIEACK switch closed
 }
 
 int main(void){
     InitSysCtrl();
     InitGpio();
-
+/*
     // EPWM1 CONFIGURATION
     CpuSysRegs.PCLKCR2.bit.EPWM1 = 1; // enable clock for EPWM1
 
@@ -73,16 +80,48 @@ int main(void){
     EALLOW;
     CpuSysRegs.PCLKCR0.bit.TBCLKSYNC=1; //all TBCLK start counting
     EDIS;
+
+    */
     // END OF EPWM CONFIGURATION
     DINT;
     InitPieCtrl();
     IER = 0x0000;
     IFR = 0x0000;
+
     InitPieVectTable();
+
+
+    Init_3phase_ePWM();
     Init_hall_sensor_ECAP(23);
-    Start_hall_sensor_ECAP();
+
+
+
+
+    EALLOW;
+    // enable clock for timers
+    CpuSysRegs.PCLKCR0.bit.CPUTIMER0 = 1;
+    CpuSysRegs.PCLKCR0.bit.CPUTIMER1 = 1;
+    InitCpuTimers(); // initialize global variable CpuTimer0, CpuTimer1, CpuTimer2
+    ConfigCpuTimer(&CpuTimer0,200,1000000); // timer, 200MHz(PLL CLK), 1000000us
+    IER |= (M_INT13 | M_INT1); // M_INT13 = CPU TIMER1 interrupt, M_INT1 = PIE1 (to enable timer0 interrupt)
+
+
+    PieCtrlRegs.PIECTRL.bit.ENPIE = 1; // set total PIE Enable Register
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1; // allow TIMER0 interrupt signal
+
+    PieVectTable.TIMER0_INT = timer0_isr; // connect the isr
+
+    EDIS;
     EINT;
     ERTM;
+
+
+    Start_3phase_ePWM();
+    Start_hall_sensor_ECAP();
+    //EPwm1Regs.CMPA.bit.CMPA = 2500/(100-50);
+
+    CpuTimer0.RegsAddr->TCR.bit.TSS = 0; //StartCpuTimer0();
+
     while(1){
 
     }
