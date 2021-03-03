@@ -129,12 +129,12 @@ void Init_hall_sensor_ECAP(Uint16 poll_pair){
     // Connect GPIO to eCAP module
     // rising edge capture
     InputXbarRegs.INPUT7SELECT = 60; // eCAP1 to HU
-    InputXbarRegs.INPUT8SELECT = 60; // eCAP2 to HV
-    InputXbarRegs.INPUT9SELECT = 60; // eCAP3 to HW
+    InputXbarRegs.INPUT8SELECT = 22; // eCAP2 to HV
+    InputXbarRegs.INPUT9SELECT = 105; // eCAP3 to HW
     // falling edge capture
     InputXbarRegs.INPUT10SELECT = 60;// eCAP4 to HU
-    InputXbarRegs.INPUT11SELECT = 60;// eCAP5 to HV
-    InputXbarRegs.INPUT12SELECT = 60;// eCAP6 to HW
+    InputXbarRegs.INPUT11SELECT = 22;// eCAP5 to HV
+    InputXbarRegs.INPUT12SELECT = 105;// eCAP6 to HW
 
     // enroll interrupt service routine for eCAP
     EALLOW;
@@ -179,9 +179,6 @@ void Init_hall_sensor_ECAP(Uint16 poll_pair){
     configure_eCAP(&ECap6Regs,falling);
 }
 void Start_hall_sensor_ECAP(){
-
-
-
     start_eCAP(&ECap1Regs);
     start_eCAP(&ECap2Regs);
     start_eCAP(&ECap3Regs);
@@ -190,6 +187,7 @@ void Start_hall_sensor_ECAP(){
     start_eCAP(&ECap6Regs);
     // synchronize eCAP 1,2,3 and 4,5,6
     // SYNCIN of eCAP 2,3 is the SYNCOUT of eCAP1
+    // SYNCIN OF eCAP 5,6 is the SYNCOUT of eCAP1
     ECap6Regs.ECCTL2.bit.SWSYNC = 0;
     ECap5Regs.ECCTL2.bit.SWSYNC = 0;
     ECap3Regs.ECCTL2.bit.SWSYNC = 0;
