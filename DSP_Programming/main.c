@@ -9,11 +9,7 @@
  */
 #include "hall_sensor.h"
 #include "pwm_run.h"
-/*
-interrupt void epwm1_isr(void){
-    EPwm1Regs.ETCLR.bit.INT=1; //clear
-    PieCtrlRegs.PIEACK.all |= PIEACK_GROUP3;
-}*/
+#include "adc_current.h"
 
 interrupt void timer0_isr(){
     CpuTimer0.InterruptCount++;
@@ -32,7 +28,9 @@ int main(void){
     InitPieVectTable();
 
     Init_3phase_ePWM();
+    Init_3current_ADC();
     Init_hall_sensor_ECAP(23);
+
 
     EALLOW;
     // enable clock for timers
@@ -53,6 +51,7 @@ int main(void){
 
     Start_hall_sensor_ECAP();
     Start_3phase_ePWM();
+    //Start_3current_ADC();
 
 
     CpuTimer0.RegsAddr->TCR.bit.TSS = 0; //StartCpuTimer0();

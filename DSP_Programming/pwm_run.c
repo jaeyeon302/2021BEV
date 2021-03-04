@@ -59,7 +59,8 @@ void epwm3_set_duty(float32 CMPA_ratio, float32 CMPB_ratio){
     epwm_set_duty(&EPwm3Regs, CMPA_ratio, CMPB_ratio);
 }
 void end_of_ePWM_INT(volatile struct EPWM_REGS* epwm){
-    epwm->ETCLR.bit.INT=1;
+    epwm->ETCLR.bit.INT = 1;
+    epwm->ETCLR.bit.SOCA = 1;
     PieCtrlRegs.PIEACK.all |= PIEACK_GROUP3;
 }
 
@@ -170,6 +171,13 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     // it manages the control loop frequency
     // INTPRD=1 -> control loop frequency = 10kHz/1;
     epwm->ETPS.bit.INTPRD = 1;
+
+    // generate ADCSOC Interrupt on every TBCTR = ZERO event
+    // all epwm generate SOCA signal
+    epwm->ETSEL.bit.SOCASEL = 1;
+    epwm->ETSEL.bit.SOCAEN = 1;
+    epwm->ETPS.bit.SOCAPRD = 1;
+    epwm->ETCLR.bit.SOCA = 1;
 }
 
 
@@ -207,7 +215,7 @@ void Init_3phase_ePWM(){
     configure_ePWM_INT();
     configure_ePWM(&EPwm1Regs);
     configure_ePWM(&EPwm2Regs);
-    configure_ePWM(&EPwm3Regs);
+    //configure_ePWM(&EPwm3Regs);
 }
 void Start_3phase_ePWM(){
     EALLOW;

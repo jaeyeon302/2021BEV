@@ -5,7 +5,7 @@
  *      Author: Jaeyeon Park
  */
 
-#include <hall_sensor.h>
+#include "hall_sensor.h"
 Commutation_state commutation;
 
 enum edge_event{rising=0, falling=1};
