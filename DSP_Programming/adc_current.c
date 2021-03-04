@@ -44,7 +44,6 @@ interrupt void ADC_phase_v_isr(){
 }
 interrupt void ADC_phase_u_isr(){
     current_result[phaseU] = AdccResultRegs.ADCRESULT0; // result from SOC0/EOC0
-    AdccRegs.ADCSOCFRC1.bit.SOC1 = 1;
     end_of_ADCINT1(&AdccRegs);
 }
 interrupt void ADC_throttle_isr(){
@@ -197,7 +196,7 @@ void Init_misc_ADC(){
     adc->ADCSOC1CTL.bit.ACQPS = 63; // 64 sysclk cycle = 320ns
     // configure SOC
     adc->ADCSOC1CTL.bit.CHSEL = 4; // ADCINx4
-    adc->ADCSOC1CTL.bit.TRIGSEL = 0; // ePWM1SOCB pulls the trigger of ADCSOC (1640 page tech doc)
+    adc->ADCSOC1CTL.bit.TRIGSEL = 6; // ePWM1SOCB pulls the trigger of ADCSOC (1640 page tech doc)
     adc->ADCINTSOCSEL1.bit.SOC1 = 0; // disable all ADCINT for trigger
 
     adc->ADCINTSEL1N2.bit.INT2E = 1;
