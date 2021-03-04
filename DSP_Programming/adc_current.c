@@ -14,9 +14,7 @@
 // 8 : ADCClock = sysclk/5 = 40MHz (Tadc = 25ns)
 
 // ADCClock should be slow enough to discharge charges in capacitor of ADC
-// 너무 빠르면 이전 샘플링 순서에 샘플링한 ADC voltage가 여전히 남아서 다음 샘플링에 영향을 줌
-// 특히 ADC의 CAP은 ADC module (ADCA, ADCB, ADCD, ADCD)에 있는 것이기 때문에
-// channel을 바꾸어도 같은 값으로 나오는 경우가 생김.
+// 너무 빠르면 이전 샘플링 순서에 샘플링한 ADC값이 일부 남아서 다음 샘플링에 영향을 줌
 // 따라서 처음에는 adcclck을 sysclk으로 주었지만 이를 prescaler로 느리게 해주었음.
 const unsigned int ADC_PRESCALE = 6;
 enum phase{phaseU=0,phaseV=1,phaseW=2};
