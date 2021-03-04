@@ -53,11 +53,42 @@ int main(void){
 
     Start_hall_sensor_ECAP();
     Start_3phase_ePWM();
-    epwm1_set_duty(0.01,0);
+
 
     CpuTimer0.RegsAddr->TCR.bit.TSS = 0; //StartCpuTimer0();
 
     while(1){
+        // pwm test code
 
+        // ePWM1 pass
+        DELAY_US(1000);
+        epwm1_set_duty(0.05,0);
+        DELAY_US(1000);
+        epwm1_set_duty(0.90,0);
+        DELAY_US(1000);
+        epwm1_set_duty(0,0.01);
+        DELAY_US(1000);
+        epwm1_set_duty(0,0.90);
+        DELAY_US(1000);
+
+        // ePWM2 pass
+        epwm2_set_duty(0.01, 0);
+        DELAY_US(1000);
+        epwm2_set_duty(0.90,0);
+        DELAY_US(1000);
+        epwm2_set_duty(0,0.01);
+        DELAY_US(1000);
+        epwm2_set_duty(0,0.90);
+        DELAY_US(1000);
+
+        // ePWM3 pass
+        epwm3_set_duty(0.01,0);
+        DELAY_US(1000);
+        epwm3_set_duty(0.90,0);
+        DELAY_US(1000);
+        epwm3_set_duty(0,0.01);
+        DELAY_US(1000);
+        epwm3_set_duty(0,0.90);
+        DELAY_US(1000);
     }
 }
