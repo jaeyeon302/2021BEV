@@ -2,38 +2,59 @@
  * adc_current.c
  *
  *  Created on: 2021. 3. 4.
- *      Author: ok6530
+ *      Author: Jaeyeon Park
  */
 
 #include "adc_current.h"
-enum signal_mode{single=0,differential=1};
 
 // sysclock = 200MHz ( Tsys = 5ns)
 // ADCclock = 200MHz / prescaler. refer to tech doc 1597 page
 // 0 : ADCClock = sysclock frequency = 200MHz ( Tadc = 5ns)
 // 6 : ADCClock = sysclck/4 = 50MHz ( Tadc = 20ns)
-const unsigned int ADC_PRESCALE = 0;
+// 8 : ADCClock = sysclk/5 = 40MHz (Tadc = 25ns)
+
+// ADCClock should be slow enough to discharge charges in capacitor of ADC
+// 너무 빠르면 이전 샘플링 순서에 샘플링한 ADC voltage가 여전히 남아서 다음 샘플링에 영향을 줌
+// 특히 ADC의 CAP은 ADC module (ADCA, ADCB, ADCD, ADCD)에 있는 것이기 때문에
+// channel을 바꾸어도 같은 값으로 나오는 경우가 생김.
+// 따라서 처음에는 adcclck을 sysclk으로 주었지만 이를 prescaler로 느리게 해주었음.
+const unsigned int ADC_PRESCALE = 6;
+enum phase{phaseU=0,phaseV=1,phaseW=2};
+Uint16 current_result[3]={0,0,0};
+Uint16 adc_throttle = 0;
+Uint16 adc_battery = 0; // 0V == 2048 (12-bit resolution), 32768(16-bit resolution)
 
 void end_of_ADCINT1(volatile struct ADC_REGS* adc){
     adc->ADCINTFLGCLR.bit.ADCINT1 = 1;
     PieCtrlRegs.PIEACK.all |= PIEACK_GROUP1;
 }
+void end_of_ADCINT2(volatile struct ADC_REGS* adc){
+    adc->ADCINTFLGCLR.bit.ADCINT2 = 1;
+    PieCtrlRegs.PIEACK.all |= PIEACK_GROUP10;
+}
 
-interrupt void ADCAINT1_isr(){
-    volatile struct ADC_REGS* adc = &AdcaRegs;
-    end_of_ADCINT1(adc);
+interrupt void ADC_phase_w_isr(){
+    current_result[phaseW] = AdcaResultRegs.ADCRESULT0; // result from SOC0/EOC0
+    end_of_ADCINT1(&AdcaRegs);
 }
-interrupt void ADCBINT1_isr(){
+interrupt void ADC_phase_v_isr(){
     volatile struct ADC_REGS* adc = &AdcbRegs;
-    end_of_ADCINT1(adc);
+    current_result[phaseV] = AdcbResultRegs.ADCRESULT0; // result from SOC0/EOC0
+    end_of_ADCINT1(&AdcbRegs);
 }
-interrupt void ADCCINT1_isr(){
-    volatile struct ADC_REGS* adc = &AdccRegs;
-    end_of_ADCINT1(adc);
+interrupt void ADC_phase_u_isr(){
+    current_result[phaseU] = AdccResultRegs.ADCRESULT0; // result from SOC0/EOC0
+    AdccRegs.ADCSOCFRC1.bit.SOC1 = 1;
+    end_of_ADCINT1(&AdccRegs);
 }
-interrupt void ADCDINT1_isr(){
-    volatile struct ADC_REGS* adc = &AdcdRegs;
-    end_of_ADCINT1(adc);
+interrupt void ADC_throttle_isr(){
+    adc_throttle = AdccResultRegs.ADCRESULT1;
+    end_of_ADCINT2(&AdccRegs);
+}
+
+interrupt void ADC_battery_isr(){
+    adc_battery = AdcdResultRegs.ADCRESULT0;
+    end_of_ADCINT1(&AdcdRegs);
 }
 
 
@@ -54,6 +75,7 @@ void configure_ADC(Uint16 adc_num,
      */
     volatile struct ADC_REGS* adc;
     EALLOW;
+    // turn on the peripheral clock for the ADC
     switch(adc_num){
         case ADC_ADCA:
             CpuSysRegs.PCLKCR13.bit.ADC_A = 1;
@@ -77,15 +99,13 @@ void configure_ADC(Uint16 adc_num,
     EDIS;
 
     EALLOW;
-    //AdcSetMode(adc_num, ADC_RESOLUTION_12BIT , mode);
-    adc->ADCCTL2.bit.RESOLUTION = ADC_RESOLUTION_12BIT;
-    adc->ADCCTL2.bit.SIGNALMODE = mode;
+    AdcSetMode(adc_num, ADC_RESOLUTION_12BIT , mode);
 
     /*
      * ADC CLOCK and sample&hold time should be configured to meet the required
      * specification of control logic
      *
-     * In this SNU Graduation project, the control frequency is 10kHz
+     * In this SNU Graduation project(2021BEV), the control frequency is 10kHz (refer to pwm_run.c)
      * ADC sampling, conversion, and calculation for control
      * should be done in 100us(=1/10,000 sec = 100,000 ns)
      */
@@ -129,15 +149,13 @@ void configure_ADC(Uint16 adc_num,
     adc->ADCINTSEL1N2.bit.INT1E = 1; // ADCINT1 interrupt ENABLE
     adc->ADCINTSEL1N2.bit.INT1SEL = 0; // EOC0 IS trigger for ADCINT1 (SOCn <-> EOCn).
                                        // the return signal for SOC0 start signal, is come from EOC1
-
-
     adc->ADCINTFLGCLR.bit.ADCINT1 = 1; // clear the adcintflg latch
     adc->ADCINTSEL1N2.bit.INT1CONT = 0;
     EDIS;
 }
 
 void configure_ADC_INT(){
-    IER |= M_INT1;
+    IER |= (M_INT1|M_INT10);
     EALLOW;
     PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
 
@@ -145,25 +163,54 @@ void configure_ADC_INT(){
     PieCtrlRegs.PIEIER1.bit.INTx2 = 1; //enable ADCINTB1
     PieCtrlRegs.PIEIER1.bit.INTx3 = 1; //enable ADCINTC1
     PieCtrlRegs.PIEIER1.bit.INTx6 = 1; //enable ADCINTD1
-    PieVectTable.ADCA1_INT = ADCAINT1_isr;
-    PieVectTable.ADCB1_INT = ADCBINT1_isr;
-    PieVectTable.ADCC1_INT = ADCCINT1_isr;
-    PieVectTable.ADCD1_INT = ADCDINT1_isr;
+
+    PieCtrlRegs.PIEIER10.bit.INTx10 = 1; //enable ADCINTC2
+
+    PieVectTable.ADCA1_INT = ADC_phase_w_isr;
+    PieVectTable.ADCB1_INT = ADC_phase_v_isr;
+    PieVectTable.ADCC1_INT = ADC_phase_u_isr;
+    PieVectTable.ADCD1_INT = ADC_battery_isr;
+
+    PieVectTable.ADCC2_INT = ADC_throttle_isr;
     EDIS;
 }
 
 void Init_3current_ADC(){
-
     configure_ADC_INT();
     configure_ADC(ADC_ADCA, 2, ADC_SIGNALMODE_SINGLE, 5); // W
     configure_ADC(ADC_ADCB, 2, ADC_SIGNALMODE_SINGLE, 7); // V
     configure_ADC(ADC_ADCC, 2, ADC_SIGNALMODE_SINGLE, 9); // U
+}
 
+void Init_misc_ADC(){
+
+    // ADC reads battery level at every ePWM periods (EPWMxSOCB)
+    configure_ADC(ADC_ADCD, 0xF, ADC_SIGNALMODE_DIFFERENTIAL, 5);
+
+    EALLOW;
+    // Throttle ADC
+    // ready to read throttle level from differential ADCD.
+    // ADC-SOC0 read current at ePWM TBCTR==0 using ePWMxSOCA.
+    // ADC-SOC1 read throttle level at ePWM TBCTR==TBPRD  using ePWMxSOCB.
+    // ePWMxSOCB setting should be configured correctly in pwm_run.c to make interrupt at the TBCTR==TBPRD moment
+    volatile struct ADC_REGS* adc = &AdccRegs;;
+    adc->ADCSOC1CTL.bit.ACQPS = 63; // 64 sysclk cycle = 320ns
+    // configure SOC
+    adc->ADCSOC1CTL.bit.CHSEL = 4; // ADCINx4
+    adc->ADCSOC1CTL.bit.TRIGSEL = 0; // ePWM1SOCB pulls the trigger of ADCSOC (1640 page tech doc)
+    adc->ADCINTSOCSEL1.bit.SOC1 = 0; // disable all ADCINT for trigger
+
+    adc->ADCINTSEL1N2.bit.INT2E = 1;
+    adc->ADCINTSEL1N2.bit.INT2SEL = 1; // EOC1 IS trigger for ADCINT2
+    adc->ADCINTFLGCLR.bit.ADCINT2 = 1;
+    adc->ADCINTSEL1N2.bit.INT2CONT = 0;
+    EDIS;
 }
 
 void Start_3current_ADC(){
-    AdcaRegs.ADCSOCFRC1.bit.SOC0 = 1; // start ADC(software trigger)
-    AdcbRegs.ADCSOCFRC1.bit.SOC0 = 1; // start ADC(software trigger)
-    AdccRegs.ADCSOCFRC1.bit.SOC0 = 1; // start ADC(software trigger)
+    //AdcaRegs.ADCSOCFRC1.bit.SOC0 = 1; // start ADC(software trigger)
+    //AdcbRegs.ADCSOCFRC1.bit.SOC0 = 1; // start ADC(software trigger)
+    //AdccRegs.ADCSOCFRC1.bit.SOC0 = 1; // start ADC(software trigger)
+    //AdccRegs.ADCSOCFRC1.bit.SOC1 = 1;
     return;
 }

@@ -1,5 +1,5 @@
 /*
- * pwm.h
+ * pwm_run.h
  *
  *  Created on: 2021. 3. 3.
  *      Author: Jaeyeon Park

@@ -4,7 +4,7 @@
  * main.c
  *
  * 2021 BEV
- * @author Jaeyeon Park
+ * Author: Jaeyeon Park
  *
  */
 #include "hall_sensor.h"
@@ -29,6 +29,7 @@ int main(void){
 
     Init_3phase_ePWM();
     Init_3current_ADC();
+    Init_misc_ADC();
     Init_hall_sensor_ECAP(23);
 
 
@@ -58,7 +59,6 @@ int main(void){
 
     while(1){
         // pwm test code
-
         // ePWM1 pass
         DELAY_US(1000);
         epwm1_set_duty(0.05,0);
