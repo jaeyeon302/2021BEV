@@ -115,9 +115,9 @@ int main(void){
     EINT;
     ERTM;
 
-
-    Start_3phase_ePWM();
     Start_hall_sensor_ECAP();
+    Start_3phase_ePWM();
+
     //EPwm1Regs.CMPA.bit.CMPA = 2500/(100-50);
 
     CpuTimer0.RegsAddr->TCR.bit.TSS = 0; //StartCpuTimer0();

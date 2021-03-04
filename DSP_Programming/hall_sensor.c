@@ -155,12 +155,12 @@ void Init_hall_sensor_ECAP(Uint16 poll_pair){
     GpioCtrlRegs.GPBGMUX2.bit.GPIO59 = 0; // use GPIO60 as gpio
     GpioCtrlRegs.GPBMUX2.bit.GPIO59 = 0;
     GpioCtrlRegs.GPBDIR.bit.GPIO59 = 1; // GPIO FOR OUTPUT
-    GpioDataRegs.GPBCLEAR.bit.GPIO59 = 1; // WRIE 0 TO GPIO 61
+    GpioDataRegs.GPBDAT.bit.GPIO59 = 0; // WRIE 0 TO GPIO 61
 
     InputXbarRegs.INPUT6SELECT = 59;
 
-    SyncSocRegs.SYNCSELECT.bit.ECAP1SYNCIN = 0; // EXTSYNCIN1 is selected for SYNCIN of ECAP1
-    SyncSocRegs.SYNCSELECT.bit.ECAP4SYNCIN = 0; // EXTSYNCIN1 is selected for SYNCIN of ECAP4
+    SyncSocRegs.SYNCSELECT.bit.ECAP1SYNCIN = 6; // 6: EXTSYNCIN2 is selected for SYNCIN of ECAP1
+    SyncSocRegs.SYNCSELECT.bit.ECAP4SYNCIN = 4; // 6: EXTSYNCIN2 is selected for SYNCIN of ECAP4
 
     configure_eCAP_INT();
     configure_eCAP(&ECap1Regs,rising);
@@ -183,10 +183,12 @@ void Start_hall_sensor_ECAP(){
     // SYNCIN OF eCAP 5,6 is the SYNCOUT of eCAP1
 
     // Send SYNC Signal to ECAPs
-    //GpioDataRegs.GPBSET.bit.GPIO59 = 1;
-    EPwm1Regs.TBCTL.bit.PHSEN = 0;
-    EPwm1Regs.TBCTL.bit.SWFSYNC = 1;
-    EPwm1Regs.TBCTL.bit.PHSEN = 1;
+    //GpioDataRegs.GPBDAT.bit.GPIO59 = 1;
+    //EPwm1Regs.TBCTL.bit.PHSEN = 0;
+    //EPwm1Regs.TBCTL.bit.SWFSYNC = 1;
+    //EPwm1Regs.TBCTL.bit.PHSEN = 1;
+    ECap1Regs.ECCTL2.bit.SWSYNC = 1;
+    //ECap4Regs.ECCTL2.bit.SWSYNC = 1;
 
     ECap1Regs.ECCTL2.bit.SYNCI_EN = 0;
     ECap2Regs.ECCTL2.bit.SYNCI_EN = 0;

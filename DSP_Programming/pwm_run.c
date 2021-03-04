@@ -208,6 +208,6 @@ void Start_3phase_ePWM(){
     EALLOW;
     CpuSysRegs.PCLKCR0.bit.TBCLKSYNC=1; //all TBCLK start counting
     EDIS;
-    GpioDataRegs.GPBDAT.bit.GPIO61 = 1; // sync all epwm clock
-    //EPwm1Regs.TBCTL.bit.SWFSYNC = 1;
+    //GpioDataRegs.GPBDAT.bit.GPIO61 = 1; // sync all epwm clock
+    EPwm1Regs.TBCTL.bit.SWFSYNC = 1;
 }
