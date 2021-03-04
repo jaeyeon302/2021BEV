@@ -13,11 +13,9 @@ enum hall_state{hu,hv,hw};
 enum hall_state last_hall_state;
 
 void end_of_eCAP_INT(volatile struct ECAP_REGS* eCAP){
-    eCAP->ECCLR.bit.INT = 1;
-
-    eCAP->ECCLR.bit.CEVT1 = 1;
-
-    eCAP->ECCTL2.bit.REARM = 1;
+    eCAP->ECCLR.bit.INT = 1; // CLEAR INTERRUPT EVENT
+    eCAP->ECCLR.bit.CEVT1 = 1; //CLEAR EVENT FROM CAP1
+    eCAP->ECCTL2.bit.REARM = 1; //RE-ARM
     PieCtrlRegs.PIEACK.all |= PIEACK_GROUP4;
 }
 
@@ -105,7 +103,6 @@ void configure_eCAP(volatile struct ECAP_REGS* eCAP, int edge_event){
     eCAP->ECCTL2.bit.SYNCO_SEL = 0; // pass the sync input signal to sync output
     eCAP->ECCTL2.bit.SYNCI_EN = 1; // enable SYNCIN
 
-
     // eCAP is stopped after configuration
 }
 
@@ -181,15 +178,9 @@ void Start_hall_sensor_ECAP(){
     // synchronize eCAP 1,2,3 and 4,5,6
     // SYNCIN of eCAP 2,3 is the SYNCOUT of eCAP1
     // SYNCIN OF eCAP 5,6 is the SYNCOUT of eCAP1
-
-    // Send SYNC Signal to ECAPs
-    //GpioDataRegs.GPBDAT.bit.GPIO59 = 1;
-    //EPwm1Regs.TBCTL.bit.PHSEN = 0;
-    //EPwm1Regs.TBCTL.bit.SWFSYNC = 1;
-    //EPwm1Regs.TBCTL.bit.PHSEN = 1;
     ECap1Regs.ECCTL2.bit.SWSYNC = 1;
-    //ECap4Regs.ECCTL2.bit.SWSYNC = 1;
 
+    // disable sync in future
     ECap1Regs.ECCTL2.bit.SYNCI_EN = 0;
     ECap2Regs.ECCTL2.bit.SYNCI_EN = 0;
     ECap3Regs.ECCTL2.bit.SYNCI_EN = 0;

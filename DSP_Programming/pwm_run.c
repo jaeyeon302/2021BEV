@@ -12,7 +12,7 @@ typedef struct CMPV{
 } PWM_CMP_Val;
 
 PWM_CMP_Val pwm_cmp[3];
-Uint16 TB_PRD = 0;
+Uint32 TB_PRD = 0;
 Uint32 tmp = 0;
 
 void epwm_set_duty(volatile struct EPWM_REGS* epwm,
@@ -32,17 +32,21 @@ void epwm_set_duty(volatile struct EPWM_REGS* epwm,
     }else if(a_duty_ratio == 1.0){
         cmpa = 0;
     }else if(a_duty_ratio>0.0 && a_duty_ratio<1.0){
-        cmpa = (Uint16)(TB_PRD - a_duty_ratio*(Uint32)TB_PRD); // bye bye Decimal places
+        cmpa = (Uint16)(TB_PRD - a_duty_ratio*TB_PRD); // bye bye Decimal places
     }
+
     if(b_duty_ratio == 0.0){
         cmpb = TB_PRD+1; // turn off
     }else if(b_duty_ratio == 1.0){
         cmpb = 0;
     }else if(b_duty_ratio > 0.0 && b_duty_ratio <1.0){
-        cmpb = (Uint16)(TB_PRD - b_duty_ratio*(Uint32)TB_PRD);
+        cmpb = (Uint16)(TB_PRD - b_duty_ratio*TB_PRD);
     }
     epwm->CMPA.bit.CMPA = cmpa;
     epwm->CMPB.bit.CMPB = cmpb;
+}
+float32 epwm_get_minimum_duty_ratio(){
+    return 1/((float32)TB_PRD);
 }
 
 void epwm1_set_duty(float32 CMPA_ratio, float32 CMPB_ratio){
@@ -150,7 +154,8 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     epwm->CMPB.bit.CMPB = TB_PRD+1; // turn off
     // WTFWTFWTF 왜 CMPA 이벤트를 발생하게 하면 Carrier 주파수가 바뀌는가?????????
     // CMPA 값을 바꾸면 Carrier wave의 주파수가 바뀜
-    // 문제해결 : InputXbarRegs로 들어오는 EPWM1의 EXTSYNCIN을 GPIO와 연결한 뒤 제대로 pull down해주지 않아서였음.
+    // 문제해결 :
+    // InputXbarRegs로 들어오는 EPWM1의 EXTSYNCIN을 GPIO와 연결한 뒤 제대로 pull down해주지 않아서였음.
     // pulldown 해주니 CMPA가 바뀌더라도 carrier wave가 바뀌지 않음
     // 왜 그런지는 내부 회로가 어떻게 되어있는지를 몰라서...
 
@@ -158,7 +163,7 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     // Register Interrupt where we will change the Compare Values
     // enable event time-base counter equal to period
     // refer to Technical document 2073 page
-    epwm->ETSEL.bit.INTSEL = 1;
+    epwm->ETSEL.bit.INTSEL = 1; // event TBCTR = 0x00 or TBPRD
     epwm->ETSEL.bit.INTEN = 1; // enable interrupt
 
     // generate Interrupt on every TBCTR = ZERO event
@@ -208,6 +213,11 @@ void Start_3phase_ePWM(){
     EALLOW;
     CpuSysRegs.PCLKCR0.bit.TBCLKSYNC=1; //all TBCLK start counting
     EDIS;
-    //GpioDataRegs.GPBDAT.bit.GPIO61 = 1; // sync all epwm clock
+
     EPwm1Regs.TBCTL.bit.SWFSYNC = 1;
+
+    // disable sync in future
+    EPwm1Regs.TBCTL.bit.PHSEN = 0;
+    EPwm2Regs.TBCTL.bit.PHSEN = 0;
+    EPwm3Regs.TBCTL.bit.PHSEN = 0;
 }
