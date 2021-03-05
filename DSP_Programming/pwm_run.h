@@ -18,8 +18,8 @@ void Init_3phase_ePWM();
 void Start_3phase_ePWM();
 float32 epwm_get_minimum_duty_ratio();
 
-void epwm1_set_duty(float32 CMPA_ratio, float32 CMPB_ratio);
-void epwm2_set_duty(float32 CMPA_ratio, float32 CMPB_ratio);
-void epwm3_set_duty(float32 CMPA_ratio, float32 CMPB_ratio);
+void epwm1_set_duty(float32 CMPA_ratio, float32 CMPB_ratio); // UH, UL
+void epwm2_set_duty(float32 CMPA_ratio, float32 CMPB_ratio); // VH, VL
+void epwm3_set_duty(float32 CMPA_ratio, float32 CMPB_ratio); // WH, WL
 
 #endif /* PWM_H_ */

@@ -18,10 +18,6 @@
 // 따라서 처음에는 adcclck을 sysclk으로 주었지만 이를 prescaler로 느리게 해주었음.
 void (*adc_control_update)(enum ADC_RESULT_TYPE, Uint16 );
 
-void Init_control_update_func( void (*fp)(enum ADC_RESULT_TYPE, Uint16) ){
-    adc_control_update = fp;
-}
-
 void end_of_ADCINT1(volatile struct ADC_REGS* adc){
     adc->ADCINTFLGCLR.bit.ADCINT1 = 1;
     PieCtrlRegs.PIEACK.all |= PIEACK_GROUP1;
