@@ -9,8 +9,6 @@
 Commutation_state commutation;
 
 enum edge_event{rising=0, falling=1};
-enum hall_state{hu,hv,hw};
-enum hall_state last_hall_state;
 
 void end_of_eCAP_INT(volatile struct ECAP_REGS* eCAP){
     eCAP->ECCLR.bit.INT = 1; // CLEAR INTERRUPT EVENT

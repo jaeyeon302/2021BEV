@@ -16,11 +16,11 @@
 // ADCClock should be slow enough to discharge charges in capacitor of ADC
 // 너무 빠르면 이전 샘플링 순서에 샘플링한 ADC값이 일부 남아서 다음 샘플링에 영향을 줌
 // 따라서 처음에는 adcclck을 sysclk으로 주었지만 이를 prescaler로 느리게 해주었음.
-const unsigned int ADC_PRESCALE = 6;
-enum phase{phaseU=0,phaseV=1,phaseW=2};
-Uint16 current_result[3]={0,0,0};
-Uint16 adc_throttle = 0;
-Uint16 adc_battery = 0; // 0V == 2048 (12-bit resolution), 32768(16-bit resolution)
+void (*adc_control_update)(enum ADC_RESULT_TYPE, Uint16 );
+
+void Init_control_update_func( void (*fp)(enum ADC_RESULT_TYPE, Uint16) ){
+    adc_control_update = fp;
+}
 
 void end_of_ADCINT1(volatile struct ADC_REGS* adc){
     adc->ADCINTFLGCLR.bit.ADCINT1 = 1;
@@ -32,25 +32,31 @@ void end_of_ADCINT2(volatile struct ADC_REGS* adc){
 }
 
 interrupt void ADC_phase_w_isr(){
-    current_result[phaseW] = AdcaResultRegs.ADCRESULT0; // result from SOC0/EOC0
+    // result from SOC0/EOC0
+    (*adc_control_update)(ADCcurrentPhaseU, AdcaResultRegs.ADCRESULT0);
     end_of_ADCINT1(&AdcaRegs);
 }
 interrupt void ADC_phase_v_isr(){
-    volatile struct ADC_REGS* adc = &AdcbRegs;
-    current_result[phaseV] = AdcbResultRegs.ADCRESULT0; // result from SOC0/EOC0
+    // result from SOC0/EOC0
+    (*adc_control_update)(ADCcurrentPhaseV, AdcbResultRegs.ADCRESULT0);
     end_of_ADCINT1(&AdcbRegs);
 }
 interrupt void ADC_phase_u_isr(){
-    current_result[phaseU] = AdccResultRegs.ADCRESULT0; // result from SOC0/EOC0
+    // result from SOC0/EOC0
+    (*adc_control_update)(ADCcurrentPhaseW, AdccResultRegs.ADCRESULT0);
+    AdccRegs.ADCSOCFRC1.bit.SOC1 = 1; // sample throttle
     end_of_ADCINT1(&AdccRegs);
 }
 interrupt void ADC_throttle_isr(){
-    adc_throttle = AdccResultRegs.ADCRESULT1;
+    // result from SOC1/EOC1
+    (*adc_control_update)(ADCthrottle, AdccResultRegs.ADCRESULT1);
     end_of_ADCINT2(&AdccRegs);
 }
 
 interrupt void ADC_battery_isr(){
-    adc_battery = AdcdResultRegs.ADCRESULT0;
+    // differential input ADC
+    // 0V == 2048 (12-bit resolution), 32768(16-bit resolution)
+    (*adc_control_update)(ADCbatteryLevel, AdcdResultRegs.ADCRESULT0);
     end_of_ADCINT1(&AdcdRegs);
 }
 
@@ -172,11 +178,13 @@ void configure_ADC_INT(){
     EDIS;
 }
 
-void Init_3current_ADC(){
+void Init_3current_ADC( void (*after_sample_adc)(enum ADC_RESULT_TYPE, Uint16) ){
     configure_ADC_INT();
     configure_ADC(ADC_ADCA, 2, ADC_SIGNALMODE_SINGLE, 5); // W
     configure_ADC(ADC_ADCB, 2, ADC_SIGNALMODE_SINGLE, 7); // V
     configure_ADC(ADC_ADCC, 2, ADC_SIGNALMODE_SINGLE, 9); // U
+
+    adc_control_update = after_sample_adc;
 }
 
 void Init_misc_ADC(){
@@ -194,7 +202,7 @@ void Init_misc_ADC(){
     adc->ADCSOC1CTL.bit.ACQPS = 63; // 64 sysclk cycle = 320ns
     // configure SOC
     adc->ADCSOC1CTL.bit.CHSEL = 4; // ADCINx4
-    adc->ADCSOC1CTL.bit.TRIGSEL = 6; // ePWM1SOCB pulls the trigger of ADCSOC (1640 page tech doc)
+    adc->ADCSOC1CTL.bit.TRIGSEL = 0; // ePWM1SOCB pulls the trigger of ADCSOC (1640 page tech doc)
     adc->ADCINTSOCSEL1.bit.SOC1 = 0; // disable all ADCINT for trigger
 
     adc->ADCINTSEL1N2.bit.INT2E = 1;

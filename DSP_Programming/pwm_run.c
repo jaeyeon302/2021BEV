@@ -13,7 +13,7 @@ typedef struct CMPV{
 
 PWM_CMP_Val pwm_cmp[3];
 Uint32 TB_PRD = 0;
-Uint32 tmp = 0;
+Uint32 epwmCycleCount = 0;
 
 void epwm_set_duty(volatile struct EPWM_REGS* epwm,
                    float32 a_duty_ratio,
@@ -66,15 +66,13 @@ void end_of_ePWM_INT(volatile struct EPWM_REGS* epwm){
 }
 
 interrupt void epwm1_isr(){
-    tmp++;
+    epwmCycleCount++;
     end_of_ePWM_INT(&EPwm1Regs);
 }
 interrupt void epwm2_isr(){
-    tmp++;
     end_of_ePWM_INT(&EPwm2Regs);
 }
 interrupt void epwm3_isr(){
-    tmp++;
     end_of_ePWM_INT(&EPwm3Regs);
 }
 
