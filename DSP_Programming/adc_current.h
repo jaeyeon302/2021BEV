@@ -12,7 +12,6 @@
 #define NOT_SAMPLED -1
 #define ADC_PRESCALE 6
 
-enum phase{phaseU=0,phaseV=1,phaseW=2, notPhase=3};
 enum ADC_RESULT_TYPE{ADCcurrentPhaseU=0,
                     ADCcurrentPhaseV=1,
                     ADCcurrentPhaseW=2,

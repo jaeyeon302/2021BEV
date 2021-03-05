@@ -9,13 +9,13 @@
  */
 #include "controller.h"
 
-
-
 interrupt void timer0_isr(){
     CpuTimer0.InterruptCount++;
     GpioDataRegs.GPATOGGLE.bit.GPIO31 = 1; //flip the led state
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; // clear PIEACK.1 == PIEACK switch closed
 }
+Commutation_state test_commutation;
+byte test;
 
 int main(void){
     InitSysCtrl();
