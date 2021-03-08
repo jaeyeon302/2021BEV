@@ -8,39 +8,23 @@
 #include "controller.h"
 Uint32 controlCycleCount = 0;
 unsigned char adc_result_flag = 0x00;
+const unsigned char ADC_ALL_SAMPLED = (FLAG_ADC_CURRENT_PHASE_U_SAMPLED
+                                      |FLAG_ADC_CURRENT_PHASE_V_SAMPLED
+                                      |FLAG_ADC_CURRENT_PHASE_W_SAMPLED
+                                      |FLAG_ADC_THROTTLE_SAMPLED
+                                      |FLAG_ADC_BATTERY_SAMPLED);
 
-#define ADC_CURRENT_PHASE_U_SAMPLED  0X01 // 0000 0001
-#define ADC_CURRENT_PHASE_V_SAMPLED  0X02 // 0000 0010
-#define ADC_CURRENT_PHASE_W_SAMPLED  0X04 // 0000 0100
-#define ADC_THROTTLE_SAMPLED  0x08    // 0000 1000
-#define ADC_BATTERY_SAMPLED  0x10  // 0001 0000
-const unsigned char ADC_ALL_SAMPLED = (ADC_CURRENT_PHASE_U_SAMPLED
-                                      |ADC_CURRENT_PHASE_V_SAMPLED
-                                      |ADC_CURRENT_PHASE_W_SAMPLED
-                                      |ADC_THROTTLE_SAMPLED
-                                      |ADC_BATTERY_SAMPLED);
-
-#define current_real_result_max 30 //[A] Adc result 4096일 때 흐르는 전류값
-#define current_result_offset 2048
 #define current_limit 8// [A]
 
 enum phase{phaseU=0,phaseV=1,phaseW=2, not=3};
 
 
 
-Uint16 phase_current_result[3]={0, 0, 0};
-// -current_real_result_max ~ value 0.
-// +current_real_result_max ~ value 4096 (expectation value based on 55mV/A, wcs1800)
-// 0A ~ value 2048.
-// (because the current sensor make output voltage 1.65V when there is no current flow)
+float32 phase_current_result[3]={0, 0, 0}; //[Ampere]
 
+float32 throttle_result = 0; //[Ampere]
+float32 battery_level_result = 0; // 0 - 48[V]
 
-// min 0 ~ max 4096
-Uint16 throttle_result = 0;
-Uint16 battery_level_result = 0; // 4096 <-> 3.3V <-> 48V BAT
-
-
-float32 throttle2current_prescaler = 2*current_real_result_max / current_limit;
 
 
 float32 adc_current_result_to_real_current_value(Uint16 adc_current_result){
@@ -60,29 +44,19 @@ float32 PIcontroller(enum phase p, Uint16 i_command, Uint16 i_measured){
 
 void control(){
     Commutation_state c = hall_sensor_get_commutation(); // current commutation
-    int32 current_result[3];
 
     float32 cmpa_ratio[3] = {0,0,0}; // high stage switch
     float32 cmpb_ratio[3] = {0,0,0}; // low stage switch
     enum phase off_phase;
 
-    for(int i = 0; i<3; i++){
-        // remove offset
-        current_result[i] = (int32)(phase_current_result[i] - current_result_offset);
-    }
-    // current_result
-    // -2048 : - current_real_result_max[A]
-    // 0 : 0A
-    // 2048 : + current_real_result_max[A]
-
-    int32 i_cmd = (int32)(throttle_result/throttle2current_prescaler);
+    float32 i_cmd = (throttle_result); //[A]
     float32 duty = 0;
     if(c.hu & !c.hv & c.hw){
         // 1 0 1
         // control UH->VL (Iu, Iv)
         // INV -> MTR 기준 Iu
         off_phase = phaseW;
-        duty = PIcontroller(phaseU, i_cmd, current_result[phaseU]);
+        duty = PIcontroller(phaseU, i_cmd, phase_current_result[phaseU]);
         cmpa_ratio[phaseU] = duty;
         cmpb_ratio[phaseV] = duty;
     }else if(c.hu & !c.hv & !c.hw){
@@ -90,7 +64,7 @@ void control(){
         // control UH->WL (Iu, Iw)
         // INV -> MTR 기준 Iu
         off_phase = phaseV;
-        duty = PIcontroller(phaseU,i_cmd,current_result[phaseU]);
+        duty = PIcontroller(phaseU,i_cmd, phase_current_result[phaseU]);
         cmpa_ratio[phaseU] = duty;
         cmpb_ratio[phaseW] = duty;
     }else if(c.hu & c.hv & !c.hw){
@@ -98,7 +72,7 @@ void control(){
         // control VH->WL (Iv, Iw)
         // INV -> MTR 기준 Iv
         off_phase = phaseU;
-        duty = PIcontroller(phaseV,i_cmd,current_result[phaseV]);
+        duty = PIcontroller(phaseV,i_cmd, phase_current_result[phaseV]);
         cmpa_ratio[phaseV] = duty;
         cmpb_ratio[phaseW] = duty;
     }else if(!c.hu & c.hv & !c.hw){
@@ -106,7 +80,7 @@ void control(){
         // control VH->UL (Iv,Iu)
         // INV -> MTR 기준 Iv
         off_phase = phaseW;
-        duty = PIcontroller(phaseV,i_cmd,current_result[phaseV]);
+        duty = PIcontroller(phaseV,i_cmd, phase_current_result[phaseV]);
         cmpa_ratio[phaseV] = duty;
         cmpb_ratio[phaseU] = duty;
     }else if(!c.hu & c.hv & c.hw){
@@ -114,7 +88,7 @@ void control(){
         // control WH->UL (Iw, Iu)
         // INV -> MTR 기준 Iw
         off_phase = phaseV;
-        duty = PIcontroller(phaseW,i_cmd,current_result[phaseW]);
+        duty = PIcontroller(phaseW,i_cmd, phase_current_result[phaseW]);
         cmpa_ratio[phaseW] = duty;
         cmpb_ratio[phaseU] = duty;
     }else if(!c.hu & !c.hv & c.hw){
@@ -122,7 +96,7 @@ void control(){
         // control WH->VL (Iw, Iv)
         // INV -> MTR 기준 Iw
         off_phase = phaseU;
-        duty = PIcontroller(phaseW,i_cmd,current_result[phaseW]);
+        duty = PIcontroller(phaseW,i_cmd, phase_current_result[phaseW]);
         cmpa_ratio[phaseW] = duty;
         cmpb_ratio[phaseV] = duty;
     }
@@ -135,27 +109,29 @@ void control(){
     epwm3_set_duty(cmpa_ratio[phaseW],cmpb_ratio[phaseW]);
 }
 
-void control_state_update(enum ADC_RESULT_TYPE type, Uint16 adc_result){
+void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
+    float32 current = (adc_result_voltage-CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO)*ADC_Voltage2Current; //[Ampere]
+
     switch(type){
     case ADCcurrentPhaseU:
-        adc_result_flag |= ADC_CURRENT_PHASE_U_SAMPLED;
-        phase_current_result[type] = adc_result;
+        adc_result_flag |= FLAG_ADC_CURRENT_PHASE_U_SAMPLED;
+        phase_current_result[type] = current;
         break;
     case ADCcurrentPhaseV:
-        adc_result_flag |= ADC_CURRENT_PHASE_V_SAMPLED;
-        phase_current_result[type] = adc_result;
+        adc_result_flag |= FLAG_ADC_CURRENT_PHASE_V_SAMPLED;
+        phase_current_result[type] = current;
         break;
     case ADCcurrentPhaseW:
-        adc_result_flag |= ADC_CURRENT_PHASE_W_SAMPLED;
-        phase_current_result[type] = adc_result;
+        adc_result_flag |= FLAG_ADC_CURRENT_PHASE_W_SAMPLED;
+        phase_current_result[type] = current;
         break;
     case ADCthrottle:
-        adc_result_flag |= ADC_THROTTLE_SAMPLED;
-        throttle_result = adc_result;
+        adc_result_flag |= FLAG_ADC_THROTTLE_SAMPLED;
+        throttle_result = adc_result_voltage*ADC_Voltage2Current*CURRENT_LIMIT_SCALE;
         break;
     case ADCbatteryLevel:
-        adc_result_flag |= ADC_BATTERY_SAMPLED;
-        battery_level_result = adc_result;
+        adc_result_flag |= FLAG_ADC_BATTERY_SAMPLED;
+        battery_level_result = adc_result_voltage*BAT_VOLTAGE_SCALER;
         break;
     default:
         break;

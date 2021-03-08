@@ -16,7 +16,7 @@
 // ADCClock should be slow enough to discharge charges in capacitor of ADC
 // 너무 빠르면 이전 샘플링 순서에 샘플링한 ADC값이 일부 남아서 다음 샘플링에 영향을 줌
 // 따라서 처음에는 adcclck을 sysclk으로 주었지만 이를 prescaler로 느리게 해주었음.
-void (*adc_control_update)(enum ADC_RESULT_TYPE, Uint16 );
+void (*adc_control_update)(enum ADC_RESULT_TYPE, float32 );
 
 void end_of_ADCINT1(volatile struct ADC_REGS* adc){
     adc->ADCINTFLGCLR.bit.ADCINT1 = 1;
@@ -29,17 +29,17 @@ void end_of_ADCINT2(volatile struct ADC_REGS* adc){
 
 interrupt void ADC_phase_w_isr(){
     // result from SOC0/EOC0
-    (*adc_control_update)(ADCcurrentPhaseU, AdcaResultRegs.ADCRESULT0);
+    (*adc_control_update)(ADCcurrentPhaseU, ADC_12bit_Ain2Voltage*AdcaResultRegs.ADCRESULT0);
     end_of_ADCINT1(&AdcaRegs);
 }
 interrupt void ADC_phase_v_isr(){
     // result from SOC0/EOC0
-    (*adc_control_update)(ADCcurrentPhaseV, AdcbResultRegs.ADCRESULT0);
+    (*adc_control_update)(ADCcurrentPhaseV, ADC_12bit_Ain2Voltage*AdcbResultRegs.ADCRESULT0);
     end_of_ADCINT1(&AdcbRegs);
 }
 interrupt void ADC_phase_u_isr(){
     // result from SOC0/EOC0
-    (*adc_control_update)(ADCcurrentPhaseW, AdccResultRegs.ADCRESULT0);
+    (*adc_control_update)(ADCcurrentPhaseW, ADC_12bit_Ain2Voltage*AdccResultRegs.ADCRESULT0);
     AdccRegs.ADCSOCFRC1.bit.SOC1 = 1; // sample throttle
     end_of_ADCINT1(&AdccRegs);
 }
@@ -115,7 +115,7 @@ void configure_ADC(Uint16 adc_num,
     //    = 10.5 ADC clock cycle (12 bit)
     //    = 29.5 ADC clock cycle (16 bit)
     // refer to tech doc 1581 page (the unit of time t is the the number of sysclk cycles)
-    adc->ADCCTL2.bit.PRESCALE = ADC_PRESCALE;
+    adc->ADCCTL2.bit.PRESCALE = ADC_CLK_PRESCALE;
 
 
     //POWER UP
@@ -174,7 +174,7 @@ void configure_ADC_INT(){
     EDIS;
 }
 
-void Init_3current_ADC( void (*after_sample_adc)(enum ADC_RESULT_TYPE, Uint16) ){
+void Init_3current_ADC( void (*after_sample_adc)(enum ADC_RESULT_TYPE, float32) ){
     configure_ADC_INT();
     configure_ADC(ADC_ADCA, 2, ADC_SIGNALMODE_SINGLE, 5); // W
     configure_ADC(ADC_ADCB, 2, ADC_SIGNALMODE_SINGLE, 7); // V

@@ -31,6 +31,7 @@ int main(void){
 
     EALLOW;
     // enable clock for timers
+    // debugging timer
     CpuSysRegs.PCLKCR0.bit.CPUTIMER0 = 1;
     CpuSysRegs.PCLKCR0.bit.CPUTIMER1 = 1;
     InitCpuTimers(); // initialize global variable CpuTimer0, CpuTimer1, CpuTimer2

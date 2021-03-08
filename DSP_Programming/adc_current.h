@@ -10,7 +10,11 @@
 #include <F28x_Project.h>
 
 #define NOT_SAMPLED -1
-#define ADC_PRESCALE 6
+#define ADC_CLK_PRESCALE 6
+
+#define ADC_12bit_Ain2Voltage ((float32)3.3/4096.0) //4096 -> 3v3
+#define ADC_16bit_Ain2Voltage ((float32)3.3/65536.0) //65536 -> 3v3
+
 
 enum ADC_RESULT_TYPE{ADCcurrentPhaseU=0,
                     ADCcurrentPhaseV=1,
