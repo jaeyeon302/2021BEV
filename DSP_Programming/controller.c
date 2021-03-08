@@ -27,9 +27,6 @@ float32 battery_level_result = 0; // 0 - 48[V]
 
 
 
-float32 adc_current_result_to_real_current_value(Uint16 adc_current_result){
-    return ( ((float32)adc_current_result) - current_result_offset) * 30 / 2048.0;
-}
 
 float32 PIcontroller(enum phase p, Uint16 i_command, Uint16 i_measured){
     // i_commnad -> i[n], i_measured -> i[n-1]
@@ -110,7 +107,7 @@ void control(){
 }
 
 void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
-    float32 current = (adc_result_voltage-CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO)*ADC_Voltage2Current; //[Ampere]
+    float32 current = (adc_result_voltage - CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO ) * ADC_Voltage2Current; //[Ampere]
 
     switch(type){
     case ADCcurrentPhaseU:

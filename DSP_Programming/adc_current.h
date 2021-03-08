@@ -23,7 +23,7 @@ enum ADC_RESULT_TYPE{ADCcurrentPhaseU=0,
                     ADCbatteryLevel=4};
 
 
-void Init_3current_ADC( void (*after_sample_adc)(enum ADC_RESULT_TYPE, Uint16)   );
+void Init_3current_ADC( void (*after_sample_adc)(enum ADC_RESULT_TYPE, float32)   );
 void Init_misc_ADC();
 
 void Start_3current_ADC();
