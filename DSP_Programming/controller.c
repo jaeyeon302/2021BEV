@@ -7,6 +7,8 @@
 
 #include "controller.h"
 Uint32 controlCycleCount = 0;
+
+
 unsigned char adc_result_flag = 0x00;
 const unsigned char ADC_ALL_SAMPLED = (FLAG_ADC_CURRENT_PHASE_U_SAMPLED
                                       |FLAG_ADC_CURRENT_PHASE_V_SAMPLED
@@ -14,88 +16,141 @@ const unsigned char ADC_ALL_SAMPLED = (FLAG_ADC_CURRENT_PHASE_U_SAMPLED
                                       |FLAG_ADC_THROTTLE_SAMPLED
                                       |FLAG_ADC_BATTERY_SAMPLED);
 
-#define current_limit 8// [A]
-
-enum phase{phaseU=0,phaseV=1,phaseW=2, not=3};
 
 
 
+Current_controller CCuvw[3];
+Current_controller CCtmp;
 float32 phase_current_result[3]={0, 0, 0}; //[Ampere]
-
 float32 throttle_result = 0; //[Ampere]
 float32 battery_level_result = 0; // 0 - 48[V]
 
-
-
-
-float32 PIcontroller(enum phase p, Uint16 i_command, Uint16 i_measured){
-    // i_commnad -> i[n], i_measured -> i[n-1]
-    static float32 err_sum[3] = {0,0,0};
-    const float32 Kp = 0.1;
-    const float32 Ki = 0.1;
-    float32 err = (float32)(i_command - i_measured);
-    err_sum[p] += err;
-    return Kp*err + Ki*err_sum[p];
+void Current_control_init(Current_controller* cc){
+    cc->I_ref = 0;
+    cc->I_fb = 0;
+    cc->I_err = 0;
+    cc->Kp = 0;
+    cc->Ki = 0;
+    cc->Ka = 0;
+    cc->K_ff = 0;
+    cc->V_err_integ = 0;
+    cc->V_ref = 0;
+    cc->V_ref_fb = 0;
+    cc->V_ref_ff = 0;
+    cc->V_sat = 0;
+    cc->V_anti = 0;
 }
 
 
-void control(){
-    Commutation_state c = hall_sensor_get_commutation(); // current commutation
+void Current_control_update(Current_controller* cc,
+                               float32 i_ref,
+                               float32 i_fb,
+                               float32 Wr_rad_per_sec){
+    cc->alpha = 1;
+    cc->I_ref = i_ref;
+    cc->I_fb = i_fb;
+    cc->I_err = i_ref - i_fb;
+    cc->V_anti = cc->V_ref - cc->V_sat;
+    cc->V_err_integ += cc->Ki*(cc->I_err - cc->Ka*cc->V_anti);
+    cc->V_ref_fb = cc->V_err_integ + (cc->alpha*cc->Kp*cc->I_err) + (1 - cc->alpha)*i_fb;
+    cc->V_ref_ff = Wr_rad_per_sec*cc->K_ff;
+    cc->V_ref = cc->V_ref_fb + cc->V_ref_ff;
+}
 
+void Current_control_update_DQ(Current_controller* ccId,
+                                  Current_controller* ccIq,
+                                  float32 id_ref,
+                                  float32 iq_ref,
+                                  float32 id_fb,
+                                  float32 iq_fb,
+                                  float32 Wr_rad_per_sec){
+
+}
+
+void control_sinusoidal_BEMF(){
+    // DQ 축 제어
+    Commutation_state c = hall_sensor_get_commutation();
+}
+
+void control_trapezoidal_BEMF0(){
+    Commutation_state c = hall_sensor_get_commutation(); // current commutation
     float32 cmpa_ratio[3] = {0,0,0}; // high stage switch
     float32 cmpb_ratio[3] = {0,0,0}; // low stage switch
     enum phase off_phase;
 
-    float32 i_cmd = (throttle_result); //[A]
+    float32 i_ref = throttle_result;//[A]
+    float32 i_fb;
+    float32 wr = hall_sensor_get_angle_speed();
+
     float32 duty = 0;
     if(c.hu & !c.hv & c.hw){
         // 1 0 1
-        // control UH->VL (Iu, Iv)
-        // INV -> MTR 기준 Iu
-        off_phase = phaseW;
-        duty = PIcontroller(phaseU, i_cmd, phase_current_result[phaseU]);
-        cmpa_ratio[phaseU] = duty;
-        cmpb_ratio[phaseV] = duty;
+        // UH UL VH VL WH WL
+        // 0 0 1 0 0 1
+        // VH -> WL
+        off_phase = phaseU;
+        i_fb = phase_current_result[phaseV];
+        Current_control_update(&CCtmp, i_ref, i_fb, wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
+        cmpa_ratio[phaseV] = duty;
+        cmpb_ratio[phaseW] = duty;
     }else if(c.hu & !c.hv & !c.hw){
         // 1 0 0
-        // control UH->WL (Iu, Iw)
-        // INV -> MTR 기준 Iu
-        off_phase = phaseV;
-        duty = PIcontroller(phaseU,i_cmd, phase_current_result[phaseU]);
-        cmpa_ratio[phaseU] = duty;
-        cmpb_ratio[phaseW] = duty;
+        // UH UL VH VL WH WL
+        // 0 1 1 0 0 0
+        // VH -> UL
+        off_phase = phaseW;
+        i_fb = phase_current_result[phaseV];
+        Current_control_update(&CCtmp, i_ref, i_fb, wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
+        cmpa_ratio[phaseV] = duty;
+        cmpb_ratio[phaseU] = duty;
     }else if(c.hu & c.hv & !c.hw){
         // 1 1 0
-        // control VH->WL (Iv, Iw)
-        // INV -> MTR 기준 Iv
-        off_phase = phaseU;
-        duty = PIcontroller(phaseV,i_cmd, phase_current_result[phaseV]);
-        cmpa_ratio[phaseV] = duty;
-        cmpb_ratio[phaseW] = duty;
+        // UH UL VH VL WH WL
+        // 0 1 0 0 1 0
+        // WH -> UL
+        off_phase = phaseV;
+        i_fb = phase_current_result[phaseW];
+        Current_control_update(&CCtmp, i_ref, i_fb, wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
+        cmpa_ratio[phaseW] = duty;
+        cmpb_ratio[phaseU] = duty;
     }else if(!c.hu & c.hv & !c.hw){
         // 0 1 0
-        // control VH->UL (Iv,Iu)
-        // INV -> MTR 기준 Iv
-        off_phase = phaseW;
-        duty = PIcontroller(phaseV,i_cmd, phase_current_result[phaseV]);
-        cmpa_ratio[phaseV] = duty;
-        cmpb_ratio[phaseU] = duty;
-    }else if(!c.hu & c.hv & c.hw){
-        // 0 1 1
-        // control WH->UL (Iw, Iu)
-        // INV -> MTR 기준 Iw
-        off_phase = phaseV;
-        duty = PIcontroller(phaseW,i_cmd, phase_current_result[phaseW]);
-        cmpa_ratio[phaseW] = duty;
-        cmpb_ratio[phaseU] = duty;
-    }else if(!c.hu & !c.hv & c.hw){
-        // 0 0 1
-        // control WH->VL (Iw, Iv)
-        // INV -> MTR 기준 Iw
+        // UH UL VH VL WH WL
+        // 0 0 0 1 1 0
+        // WH -> VL
+
         off_phase = phaseU;
-        duty = PIcontroller(phaseW,i_cmd, phase_current_result[phaseW]);
+        i_fb = phase_current_result[phaseW];
+        Current_control_update(&CCtmp, i_ref, i_fb, wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
         cmpa_ratio[phaseW] = duty;
         cmpb_ratio[phaseV] = duty;
+    }else if(!c.hu & c.hv & c.hw){
+        // 0 1 1
+        // UH UL VH VL WH WL
+        // 1 0 0 1 0 0
+        // UH -> VL
+        off_phase = phaseW;
+        i_fb = phase_current_result[phaseU];
+        Current_control_update(&CCtmp, i_ref, i_fb, wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
+        cmpa_ratio[phaseU] = duty;
+        cmpb_ratio[phaseV] = duty;
+    }else if(!c.hu & !c.hv & c.hw){
+        // 0 0 1
+        // UH UL VH VL WH WL
+        // 1 0 0 0 0 1
+        // UH -> WL
+        off_phase = phaseV;
+        i_fb = phase_current_result[phaseU];
+        Current_control_update(&CCtmp, i_ref, i_fb, wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
+        cmpa_ratio[phaseU] = duty;
+        cmpb_ratio[phaseW] = duty;
+
     }
 
     cmpa_ratio[off_phase] = 0.0;
@@ -104,6 +159,7 @@ void control(){
     epwm1_set_duty(cmpa_ratio[phaseU],cmpb_ratio[phaseU]);
     epwm2_set_duty(cmpa_ratio[phaseV],cmpb_ratio[phaseV]);
     epwm3_set_duty(cmpa_ratio[phaseW],cmpb_ratio[phaseW]);
+
 }
 
 void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
@@ -136,7 +192,10 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
 
     if(adc_result_flag == ADC_ALL_SAMPLED ){
         controlCycleCount++;
-        control();
+
+        //control_sinusoidal_BEMF();  // Q CURRENT CONTROL - PMSM
+        //control_trapezoidal_BEMF(); // 3 CURRENT CONTROLLER 3 PHASE DC
+        control_trapezoidal_BEMF0(); // 1 CURRENT CCONTROLLER 3 PHASE DC
         adc_result_flag = 0x00; //re-initialize for next sampling
     }
 }
@@ -156,6 +215,18 @@ void Ready_controller(){
     // 만일 그렇지 않으면 ADC, ECAP이 initialize 되는 동안
     // start_controller에 의해 ePWM이 시작되고 ePWM cycle (2~3개)가 그냥 지나가버린다
     // ePWM -> ADC 호출 -> 제어함수 호출 구조이기 때문에, ADC를 ePWM보다 먼저 설정을 완료해야한다.
+    Current_control_init(&CCuvw[phaseU]);
+    Current_control_init(&CCuvw[phaseV]);
+    Current_control_init(&CCuvw[phaseW]);
+    Current_control_init(&CCtmp);
+
+    CCtmp.Kp = Kp_BLDC;
+    CCtmp.Ki = Ki_BLDC;
+    CCtmp.Ka = Ka_BLDC;
+    CCtmp.alpha = 1; // PI CONTROLLER
+    CCtmp.V_ref_ff = Ka_BLDC;
+
+
     Init_3current_ADC( &control_state_update );
     Init_misc_ADC();
     Init_hall_sensor_ECAP(23);
