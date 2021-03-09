@@ -14,19 +14,19 @@
 #include "adc_current.h"
 
 // ±è»óÈÆ Àú ) ¸ðÅÍÁ¦¾î 119, 145 page
-#define Wc 100 // [Hz] control system bandwidth
-#define Ls ((float32)0.104/1000) // [H]
+#define Wc 2*PI*100 // [Hz] control system bandwidth
+#define Ls ((float32)1.04/1000) // [H]
 #define Rs ((float32)0.1) //[ohm]
-#define Kp_BLDC Ls*Wc
-#define Ki_BLDC Rs*Wc
-#define Ka_BLDC ((float32)1/Kp_BLDC);
+#define Kp_BLDC Ls*Wc // 10.4
+#define Ki_BLDC Rs*Wc // 10
+#define Ka_BLDC ((float32)1/Kp_BLDC) // similiar to 0.1
 
 
 #define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)55.0/1000.0) //wcs1800 [mV/A]
 #define CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO 1.65 // [V]
 #define CURRENT_LIMIT_SCALE 0.33 //
 
-#define BAT_VOLTAGE 48.0 //[V]
+#define BAT_VOLTAGE  3.3 //48.0 //[V]
 #define BAT_VOLTAGE_SCALER ((float32)BAT_VOLTAGE/3.3) //
 #define ADC_Voltage2Current ((float32)1.0/CURRENT_SENSOR_VOLTAGE_SLOPE) // 1.65V -> MAX_CURRENT [A]
 

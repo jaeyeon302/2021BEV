@@ -27,17 +27,17 @@ void epwm_set_duty(volatile struct EPWM_REGS* epwm,
 
     Uint16 cmpa = 0;
     Uint16 cmpb = 0;
-    if(a_duty_ratio == 0.0){
+    if(a_duty_ratio <= 0.0){
         cmpa = TB_PRD+1; // turn off
-    }else if(a_duty_ratio == 1.0){
+    }else if(a_duty_ratio >= 1.0){
         cmpa = 0;
     }else if(a_duty_ratio>0.0 && a_duty_ratio<1.0){
         cmpa = (Uint16)(TB_PRD - a_duty_ratio*TB_PRD); // bye bye Decimal places
     }
 
-    if(b_duty_ratio == 0.0){
+    if(b_duty_ratio <= 0.0){
         cmpb = TB_PRD+1; // turn off
-    }else if(b_duty_ratio == 1.0){
+    }else if(b_duty_ratio >= 1.0){
         cmpb = 0;
     }else if(b_duty_ratio > 0.0 && b_duty_ratio <1.0){
         cmpb = (Uint16)(TB_PRD - b_duty_ratio*TB_PRD);
@@ -144,10 +144,11 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     epwm->CMPCTL.bit.LOADBMODE=0;
 
     // Set actions
-    epwm->AQCTLA.bit.CAU = 2; // set PWM1A(HIGH) on event A, up count
-    epwm->AQCTLA.bit.CAD = 1; // clear PWM1A (LOW) on event A, down count
-    epwm->AQCTLB.bit.CBU = 2;
-    epwm->AQCTLB.bit.CBD = 1;
+    // event A : TBCTR = CMPA, event B : TBCTR = CMPB
+    epwm->AQCTLA.bit.CAU = 2; // set PWM1A HIGH on event A, up count
+    epwm->AQCTLA.bit.CAD = 1; // clear PWM1A LOW on event A, down count
+    epwm->AQCTLB.bit.CBU = 1; // set PWM1B LOW on event B, up count
+    epwm->AQCTLB.bit.CBD = 2; // set PWM1B HIGH on event B, down ccount
 
     // Set Default Compare Values
     epwm->CMPA.bit.CMPA = TB_PRD+1; // turn off

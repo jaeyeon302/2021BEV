@@ -46,6 +46,14 @@ void Current_control_update(Current_controller* cc,
                                float32 i_ref,
                                float32 i_fb,
                                float32 Wr_rad_per_sec){
+    float32 i_err = i_ref - i_fb;
+    float32 anti_windup = cc->V_ref - cc->V_sat;
+    cc->V_err_integ += cc->Ki*( i_err - cc->Ka*anti_windup );
+    cc->V_ref = cc->Kp*(i_err) + cc->V_err_integ - cc->Ka*anti_windup;
+    cc->V_ref_ff = Wr_rad_per_sec * cc->K_ff;
+
+    cc->V_ref += cc->V_ref_ff;
+/*
     cc->alpha = 1;
     cc->I_ref = i_ref;
     cc->I_fb = i_fb;
@@ -54,7 +62,7 @@ void Current_control_update(Current_controller* cc,
     cc->V_err_integ += cc->Ki*(cc->I_err - cc->Ka*cc->V_anti);
     cc->V_ref_fb = cc->V_err_integ + (cc->alpha*cc->Kp*cc->I_err) + (1 - cc->alpha)*i_fb;
     cc->V_ref_ff = Wr_rad_per_sec*cc->K_ff;
-    cc->V_ref = cc->V_ref_fb + cc->V_ref_ff;
+    cc->V_ref = cc->V_ref_fb + cc->V_ref_ff;*/
 }
 
 void Current_control_update_DQ(Current_controller* ccId,
@@ -74,6 +82,10 @@ void control_sinusoidal_BEMF(){
 
 void control_trapezoidal_BEMF0(){
     Commutation_state c = hall_sensor_get_commutation(); // current commutation
+    // FOR THE TEST
+    // ONLY CONTROL HIGH SIDE OF U PHASE
+    c.hu = 0; c.hv = 1; c.hw = 1; // 011
+
     float32 cmpa_ratio[3] = {0,0,0}; // high stage switch
     float32 cmpb_ratio[3] = {0,0,0}; // low stage switch
     enum phase off_phase;
@@ -152,7 +164,6 @@ void control_trapezoidal_BEMF0(){
         cmpb_ratio[phaseW] = duty;
 
     }
-
     cmpa_ratio[off_phase] = 0.0;
     cmpb_ratio[off_phase] = 0.0;
 
@@ -224,7 +235,7 @@ void Ready_controller(){
     CCtmp.Ki = Ki_BLDC;
     CCtmp.Ka = Ka_BLDC;
     CCtmp.alpha = 1; // PI CONTROLLER
-    CCtmp.V_ref_ff = Ka_BLDC;
+    CCtmp.V_sat = BAT_VOLTAGE;
 
 
     Init_3current_ADC( &control_state_update );
