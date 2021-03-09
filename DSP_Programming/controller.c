@@ -54,7 +54,7 @@ void Current_control_update(Current_controller* cc,
 
     cc->V_ref += cc->V_ref_ff;
     if(cc->V_ref>BAT_VOLTAGE){
-        cc->V_ref = 3.3;
+        cc->V_ref = BAT_VOLTAGE;
     }
 /*
     cc->alpha = 1;
