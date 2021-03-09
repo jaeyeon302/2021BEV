@@ -29,7 +29,7 @@ void end_of_ADCINT2(volatile struct ADC_REGS* adc){
 
 interrupt void ADC_phase_w_isr(){
     // result from SOC0/EOC0
-    (*adc_control_update)(ADCcurrentPhaseU, ADC_12bit_Ain2Voltage*AdcaResultRegs.ADCRESULT0);
+    (*adc_control_update)(ADCcurrentPhaseW, ADC_12bit_Ain2Voltage*AdcaResultRegs.ADCRESULT0);
     end_of_ADCINT1(&AdcaRegs);
 }
 interrupt void ADC_phase_v_isr(){
@@ -39,7 +39,7 @@ interrupt void ADC_phase_v_isr(){
 }
 interrupt void ADC_phase_u_isr(){
     // result from SOC0/EOC0
-    (*adc_control_update)(ADCcurrentPhaseW, ADC_12bit_Ain2Voltage*AdccResultRegs.ADCRESULT0);
+    (*adc_control_update)(ADCcurrentPhaseU, ADC_12bit_Ain2Voltage*AdccResultRegs.ADCRESULT0);
     AdccRegs.ADCSOCFRC1.bit.SOC1 = 1; // sample throttle
     end_of_ADCINT1(&AdccRegs);
 }
