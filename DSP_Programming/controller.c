@@ -53,6 +53,9 @@ void Current_control_update(Current_controller* cc,
     cc->V_ref_ff = Wr_rad_per_sec * cc->K_ff;
 
     cc->V_ref += cc->V_ref_ff;
+    if(cc->V_ref>BAT_VOLTAGE){
+        cc->V_ref = 3.3;
+    }
 /*
     cc->alpha = 1;
     cc->I_ref = i_ref;
@@ -80,12 +83,13 @@ void control_sinusoidal_BEMF(){
     Commutation_state c = hall_sensor_get_commutation();
 }
 
-void control_trapezoidal_BEMF1(){
+void control_trapezoidal_BEMF0(){
     Commutation_state c = hall_sensor_get_commutation();
 
     // FOR THE TEST
     // ONLY CONTROL HIGH SIDE OF U PHASE
-    c.hu = 0; c.hv = 1; c.hw = 1; // 011
+    // 011
+    c.hu = 0; c.hv = 1; c.hw = 1; // TODO REMOVE THIS LINE TO OPERATE MOTOR
 
     float32 highside_duty_ratio[3] = {0,0,0};
     float32 lowside_duty_ratio[3] = {0,0,0};
@@ -93,8 +97,8 @@ void control_trapezoidal_BEMF1(){
     enum phase off_phase;
 
     float32 i_ref = throttle_result;
-    float32 i_fb;
-    float32 wr = hall_sensor_get_angle_speed();
+    float32 i_fb = 0;
+    float32 wr =  0;//hall_sensor_get_angle_speed();
     float32 duty = 0;
     if(c.hu&!c.hv&c.hw){
         // 1 0 1
@@ -185,104 +189,11 @@ void control_trapezoidal_BEMF1(){
     epwm3_set_duty(highside_duty_ratio[phaseW], lowside_duty_ratio[phaseW]);
 }
 
-/*
-void control_trapezoidal_BEMF0(){
-    Commutation_state c = hall_sensor_get_commutation(); // current commutation
-    // FOR THE TEST
-    // ONLY CONTROL HIGH SIDE OF U PHASE
-    c.hu = 0; c.hv = 1; c.hw = 1; // 011
-
-    float32 cmpa_ratio[3] = {0,0,0}; // high stage switch
-    float32 cmpb_ratio[3] = {0,0,0}; // low stage switch
-    enum phase off_phase;
-
-    float32 i_ref = throttle_result;//[A]
-    float32 i_fb;
-    float32 wr = hall_sensor_get_angle_speed();
-
-    float32 duty = 0;
-    if(c.hu & !c.hv & c.hw){
-        // 1 0 1
-        // UH UL VH VL WH WL
-        // 0 0 1 0 0 1
-        // VH -> WL
-        off_phase = phaseU;
-        i_fb = phase_current_result[phaseV];
-        Current_control_update(&CCtmp, i_ref, i_fb, wr);
-        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
-        cmpa_ratio[phaseV] = duty;
-
-        cmpb_ratio[phaseW] = 0; // turn on low side
-        cmpb_ratio[phaseW] = duty;
-    }else if(c.hu & !c.hv & !c.hw){
-        // 1 0 0
-        // UH UL VH VL WH WL
-        // 0 1 1 0 0 0
-        // VH -> UL
-        off_phase = phaseW;
-        i_fb = phase_current_result[phaseV];
-        Current_control_update(&CCtmp, i_ref, i_fb, wr);
-        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
-        cmpa_ratio[phaseV] = duty;
-        cmpb_ratio[phaseU] = duty;
-    }else if(c.hu & c.hv & !c.hw){
-        // 1 1 0
-        // UH UL VH VL WH WL
-        // 0 1 0 0 1 0
-        // WH -> UL
-        off_phase = phaseV;
-        i_fb = phase_current_result[phaseW];
-        Current_control_update(&CCtmp, i_ref, i_fb, wr);
-        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
-        cmpa_ratio[phaseW] = duty;
-        cmpb_ratio[phaseU] = duty;
-    }else if(!c.hu & c.hv & !c.hw){
-        // 0 1 0
-        // UH UL VH VL WH WL
-        // 0 0 0 1 1 0
-        // WH -> VL
-
-        off_phase = phaseU;
-        i_fb = phase_current_result[phaseW];
-        Current_control_update(&CCtmp, i_ref, i_fb, wr);
-        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
-        cmpa_ratio[phaseW] = duty;
-        cmpb_ratio[phaseV] = duty;
-    }else if(!c.hu & c.hv & c.hw){
-        // 0 1 1
-        // UH UL VH VL WH WL
-        // 1 0 0 1 0 0
-        // UH -> VL
-        off_phase = phaseW;
-        i_fb = phase_current_result[phaseU];
-        Current_control_update(&CCtmp, i_ref, i_fb, wr);
-        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
-        cmpa_ratio[phaseU] = duty;
-        cmpb_ratio[phaseV] = duty;
-    }else if(!c.hu & !c.hv & c.hw){
-        // 0 0 1
-        // UH UL VH VL WH WL
-        // 1 0 0 0 0 1
-        // UH -> WL
-        off_phase = phaseV;
-        i_fb = phase_current_result[phaseU];
-        Current_control_update(&CCtmp, i_ref, i_fb, wr);
-        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
-        cmpa_ratio[phaseU] = duty;
-        cmpb_ratio[phaseW] = duty;
-
-    }
-    cmpa_ratio[off_phase] = 0.0;
-    cmpb_ratio[off_phase] = 0.0;
-
-    epwm1_set_duty(cmpa_ratio[phaseU],cmpb_ratio[phaseU]);
-    epwm2_set_duty(cmpa_ratio[phaseV],cmpb_ratio[phaseV]);
-    epwm3_set_duty(cmpa_ratio[phaseW],cmpb_ratio[phaseW]);
-
-}
-*/
 void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
-    float32 current = (adc_result_voltage - CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO ) * ADC_Voltage2Current; //[Ampere]
+    //float32 current = (adc_result_voltage - CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO ) * ADC_Voltage2Current; //[Ampere]
+
+
+    float32 current = adc_result_voltage/100.0; // TODO FOR THE TEST. REMOVE THIS LINE TO OPERATE MOTOR
 
     switch(type){
     case ADCcurrentPhaseU:
@@ -299,7 +210,9 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         break;
     case ADCthrottle:
         adc_result_flag |= FLAG_ADC_THROTTLE_SAMPLED;
-        throttle_result = adc_result_voltage*ADC_Voltage2Current*CURRENT_LIMIT_SCALE;
+        //FOR TEST
+        throttle_result = 0.015/4; //TODO FOR THE TEST. REMOVE THIS LINE TO OPERATE THE MOTOR
+        //throttle_result = adc_result_voltage*ADC_Voltage2Current*CURRENT_LIMIT_SCALE;
         break;
     case ADCbatteryLevel:
         adc_result_flag |= FLAG_ADC_BATTERY_SAMPLED;
@@ -314,8 +227,8 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
 
         //control_sinusoidal_BEMF();  // Q CURRENT CONTROL - PMSM
         //control_trapezoidal_BEMF(); // 3 CURRENT CONTROLLER 3 PHASE DC
-        control_trapezoidal_BEMF1(); // 1 CURRENT CCONTROLLER 3 PHASE DC
-        adc_result_flag = 0x00; //re-initialize for next sampling
+        control_trapezoidal_BEMF0(); // 1 CURRENT CCONTROLLER 3 PHASE DC
+        adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }
 }
 

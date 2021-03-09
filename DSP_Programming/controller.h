@@ -14,12 +14,12 @@
 #include "adc_current.h"
 
 // ±è»óÈÆ Àú ) ¸ðÅÍÁ¦¾î 119, 145 page
-#define Wc 2*PI*100 // [Hz] control system bandwidth
-#define Ls ((float32)1.04/1000) // [H]
-#define Rs ((float32)0.1) //[ohm]
-#define Kp_BLDC Ls*Wc // 10.4
-#define Ki_BLDC Rs*Wc // 10
-#define Ka_BLDC ((float32)1/Kp_BLDC) // similiar to 0.1
+#define Wc 1 //2*PI*100 // [Hz] control system bandwidth
+#define Ls ((float32)500/1000) // [H]
+#define Rs ((float32)100) //[ohm]
+#define Kp_BLDC Ls*Wc //
+#define Ki_BLDC Rs*Wc //
+#define Ka_BLDC 0 //((float32)1/Kp_BLDC) //
 
 
 #define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)55.0/1000.0) //wcs1800 [mV/A]
