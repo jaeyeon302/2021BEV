@@ -80,6 +80,112 @@ void control_sinusoidal_BEMF(){
     Commutation_state c = hall_sensor_get_commutation();
 }
 
+void control_trapezoidal_BEMF1(){
+    Commutation_state c = hall_sensor_get_commutation();
+
+    // FOR THE TEST
+    // ONLY CONTROL HIGH SIDE OF U PHASE
+    c.hu = 0; c.hv = 1; c.hw = 1; // 011
+
+    float32 highside_duty_ratio[3] = {0,0,0};
+    float32 lowside_duty_ratio[3] = {0,0,0};
+
+    enum phase off_phase;
+
+    float32 i_ref = throttle_result;
+    float32 i_fb;
+    float32 wr = hall_sensor_get_angle_speed();
+    float32 duty = 0;
+    if(c.hu&!c.hv&c.hw){
+        // 1 0 1
+        // UH UL VH VL WH WL
+        // 0 0 1 0 0 1
+        // VH -> WL
+        off_phase = phaseU; // floating U
+        i_fb = phase_current_result[phaseV];
+        Current_control_update(&CCtmp,i_ref,i_fb,wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE;
+        highside_duty_ratio[phaseV] = duty;
+        lowside_duty_ratio[phaseV] = (1-duty);
+        highside_duty_ratio[phaseW] = 0;
+        lowside_duty_ratio[phaseW] = 1;
+    }else if(c.hu & !c.hv & !c.hw){
+        // 1 0 0
+        // UH UL VH VL WH WL
+        // 0 1 1 0 0 0
+        // VH -> UL
+        off_phase = phaseW;
+        i_fb = phase_current_result[phaseV];
+        Current_control_update(&CCtmp,i_ref,i_fb,wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE;
+        highside_duty_ratio[phaseV] = duty;
+        lowside_duty_ratio[phaseV] = (1.0-duty);
+        highside_duty_ratio[phaseU] = 0.0;
+        lowside_duty_ratio[phaseU] = 1.0;
+    }else if(c.hu & c.hv & !c.hw){
+        // 1 1 0
+        // UH UL VH VL WH WL
+        // 0 1 0 0 1 0
+        // WH -> UL
+        off_phase = phaseV;
+        i_fb = phase_current_result[phaseW];
+        Current_control_update(&CCtmp, i_ref, i_fb, wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
+        highside_duty_ratio[phaseW] = duty;
+        lowside_duty_ratio[phaseW] = 1.0-duty;
+        highside_duty_ratio[phaseU] = 0.0;
+        lowside_duty_ratio[phaseU] = 1.0;
+    }else if(!c.hu & c.hv & !c.hw){
+        // 0 1 0
+        // UH UL VH VL WH WL
+        // 0 0 0 1 1 0
+        // WH -> VL
+        off_phase = phaseU;
+        i_fb = phase_current_result[phaseW];
+        Current_control_update(&CCtmp, i_ref, i_fb, wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
+        highside_duty_ratio[phaseW] = duty;
+        lowside_duty_ratio[phaseW] = 1.0-duty;
+        highside_duty_ratio[phaseV] = 0.0;
+        lowside_duty_ratio[phaseV] = 1.0;
+    }else if(!c.hu & c.hv & c.hw){
+        // 0 1 1
+        // UH UL VH VL WH WL
+        // 1 0 0 1 0 0
+        // UH -> VL
+        off_phase = phaseW;
+        i_fb = phase_current_result[phaseU];
+        Current_control_update(&CCtmp, i_ref, i_fb, wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
+        highside_duty_ratio[phaseU] = duty;
+        lowside_duty_ratio[phaseU] = 1.0-duty;
+        highside_duty_ratio[phaseV] = 0.0;
+        lowside_duty_ratio[phaseV] = 1.0;
+    }else if(!c.hu & !c.hv & c.hw){
+        // 0 0 1
+        // UH UL VH VL WH WL
+        // 1 0 0 0 0 1
+        // UH -> WL
+        off_phase = phaseV;
+        i_fb = phase_current_result[phaseU];
+        Current_control_update(&CCtmp, i_ref, i_fb, wr);
+        duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
+        highside_duty_ratio[phaseU] = duty;
+        lowside_duty_ratio[phaseU] = 1.0-duty;
+        highside_duty_ratio[phaseW] = 0.0;
+        lowside_duty_ratio[phaseW] = 1.0;
+    }
+
+    // floating
+    highside_duty_ratio[off_phase] = 0.0;
+    lowside_duty_ratio[off_phase] = 0.0;
+
+    epwm1_set_duty(highside_duty_ratio[phaseU], lowside_duty_ratio[phaseU]);
+    epwm2_set_duty(highside_duty_ratio[phaseV], lowside_duty_ratio[phaseV]);
+    epwm3_set_duty(highside_duty_ratio[phaseW], lowside_duty_ratio[phaseW]);
+}
+
+/*
 void control_trapezoidal_BEMF0(){
     Commutation_state c = hall_sensor_get_commutation(); // current commutation
     // FOR THE TEST
@@ -105,6 +211,8 @@ void control_trapezoidal_BEMF0(){
         Current_control_update(&CCtmp, i_ref, i_fb, wr);
         duty = CCtmp.V_ref/BAT_VOLTAGE; // or battery_level_result;
         cmpa_ratio[phaseV] = duty;
+
+        cmpb_ratio[phaseW] = 0; // turn on low side
         cmpb_ratio[phaseW] = duty;
     }else if(c.hu & !c.hv & !c.hw){
         // 1 0 0
@@ -172,7 +280,7 @@ void control_trapezoidal_BEMF0(){
     epwm3_set_duty(cmpa_ratio[phaseW],cmpb_ratio[phaseW]);
 
 }
-
+*/
 void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
     float32 current = (adc_result_voltage - CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO ) * ADC_Voltage2Current; //[Ampere]
 
@@ -206,7 +314,7 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
 
         //control_sinusoidal_BEMF();  // Q CURRENT CONTROL - PMSM
         //control_trapezoidal_BEMF(); // 3 CURRENT CONTROLLER 3 PHASE DC
-        control_trapezoidal_BEMF0(); // 1 CURRENT CCONTROLLER 3 PHASE DC
+        control_trapezoidal_BEMF1(); // 1 CURRENT CCONTROLLER 3 PHASE DC
         adc_result_flag = 0x00; //re-initialize for next sampling
     }
 }

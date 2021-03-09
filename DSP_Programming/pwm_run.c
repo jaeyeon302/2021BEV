@@ -23,34 +23,35 @@ void epwm_set_duty(volatile struct EPWM_REGS* epwm,
 
     if(TB_PRD==0) return;// not set CMPA & CMPB if TB_PRD is not set
     // protection
-    if(a_duty_ratio > 0.0 && b_duty_ratio > 0.0) return;
+    if(a_duty_ratio+b_duty_ratio>1.0) return;
 
     Uint16 cmpa = 0;
     Uint16 cmpb = 0;
     if(a_duty_ratio <= 0.0){
         cmpa = TB_PRD+1; // turn off
     }else if(a_duty_ratio >= 1.0){
-        cmpa = 0;
+        cmpa = 0; // turn on
     }else if(a_duty_ratio>0.0 && a_duty_ratio<1.0){
         cmpa = (Uint16)(TB_PRD - a_duty_ratio*TB_PRD); // bye bye Decimal places
     }
 
     if(b_duty_ratio <= 0.0){
-        cmpb = TB_PRD+1; // turn off
+        cmpb = 0; //turn off
     }else if(b_duty_ratio >= 1.0){
-        cmpb = 0;
-    }else if(b_duty_ratio > 0.0 && b_duty_ratio <1.0){
-        cmpb = (Uint16)(TB_PRD - b_duty_ratio*TB_PRD);
+        cmpb = TB_PRD-1;
+    }else if(b_duty_ratio>0.0 && b_duty_ratio<1.0){
+        cmpb = (Uint16)( ((float32)TB_PRD)*b_duty_ratio);
     }
-    epwm->CMPA.bit.CMPA = cmpa;
-    epwm->CMPB.bit.CMPB = cmpb;
+
+    epwm->CMPA.bit.CMPA = cmpa; // pwmA : rising on TBCTR = CMPA up-count, falling on TBCTR = CMPA down-count
+    epwm->CMPB.bit.CMPB = cmpb; // pwmB : rising on TBCTR = CMPB down-count, falling on TBCTR = CMPB up-count
 }
 float32 epwm_get_minimum_duty_ratio(){
     return 1/((float32)TB_PRD);
 }
 
-void epwm1_set_duty(float32 CMPA_ratio, float32 CMPB_ratio){
-    epwm_set_duty(&EPwm1Regs, CMPA_ratio, CMPB_ratio);
+void epwm1_set_duty(float32 highside_ratio, float32 lowside_ratio){
+    epwm_set_duty(&EPwm1Regs, highside_ratio, lowside_ratio);
 }
 void epwm2_set_duty(float32 CMPA_ratio, float32 CMPB_ratio){
     epwm_set_duty(&EPwm2Regs, CMPA_ratio, CMPB_ratio);
@@ -152,7 +153,7 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
 
     // Set Default Compare Values
     epwm->CMPA.bit.CMPA = TB_PRD+1; // turn off
-    epwm->CMPB.bit.CMPB = TB_PRD+1; // turn off
+    epwm->CMPB.bit.CMPB = 0; // turn off
     // WTFWTFWTF 왜 CMPA 이벤트를 발생하게 하면 Carrier 주파수가 바뀌는가?????????
     // CMPA 값을 바꾸면 Carrier wave의 주파수가 바뀜
     // 문제해결 :
