@@ -146,14 +146,16 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
 
     // Set actions
     // event A : TBCTR = CMPA, event B : TBCTR = CMPB
-    epwm->AQCTLA.bit.CAU = 2; // set PWM1A HIGH on event A, up count
-    epwm->AQCTLA.bit.CAD = 1; // clear PWM1A LOW on event A, down count
-    epwm->AQCTLB.bit.CBU = 1; // set PWM1B LOW on event B, up count
-    epwm->AQCTLB.bit.CBD = 2; // set PWM1B HIGH on event B, down ccount
+    // 포토 커플러로 인해서 값이 inverting 해서 들어가게 됨. 그래서 highside를 downcount일 때 uprising 해줘야 inverting해서 실제 mosfet gate 신호는 falling 됨
+    epwm->AQCTLA.bit.CAU = 1; // set PWM1A HIGH on event A, Up count
+    epwm->AQCTLA.bit.CAD = 2; // clear PWM1A LOW on event A, down count
+    epwm->AQCTLB.bit.CBU = 2; // set PWM1B LOW on event B, up count
+    epwm->AQCTLB.bit.CBD = 1; // set PWM1B HIGH on event B, down ccount
 
     // Set Default Compare Values
-    epwm->CMPA.bit.CMPA = TB_PRD+1; // turn off
-    epwm->CMPB.bit.CMPB = 0; // turn off
+    // photo coupler로 인해서 값이 inverting 해서 들어가게 됨
+    epwm->CMPA.bit.CMPA = 0; //TB_PRD+1; // turn off
+    epwm->CMPB.bit.CMPB = TB_PRD+1; //0; // turn off
     // WTFWTFWTF 왜 CMPA 이벤트를 발생하게 하면 Carrier 주파수가 바뀌는가?????????
     // CMPA 값을 바꾸면 Carrier wave의 주파수가 바뀜
     // 문제해결 :
