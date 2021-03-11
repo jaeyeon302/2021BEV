@@ -186,6 +186,19 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     epwm->ETSEL.bit.SOCBEN = 1;
     epwm->ETPS.bit.SOCBPRD = 1;
     epwm->ETCLR.bit.SOCB = 1;
+
+
+    // Setup Deadband
+    epwm->DBCTL.bit.SHDWDBFEDMODE=0;
+    epwm->DBCTL.bit.SHDWDBREDMODE=0;
+    epwm->DBCTL2.bit.SHDWDBCTLMODE=0;
+
+    epwm->DBCTL.bit.POLSEL = 2;
+    epwm->DBCTL.bit.OUT_MODE = 3;
+
+    epwm->DBRED.bit.DBRED = 100; //TBCLK=50MHz, delay 2us
+    epwm->DBFED.bit.DBFED = 100;
+
 }
 
 
