@@ -219,7 +219,7 @@ float32 hall_sensor_get_angle_speed(){
     return  Deg_60_IN_RAD/time;// rad / sec //( ((float32)TSCTR_PER_SEC)/((float32)last_interrupt_period) ) * Deg_60_IN_RAD;
 }
 float32 hall_sensor_get_E_angle_position(){
-    //return rad (electrical angle position)
+    // return rad (electrical angle position)
     // linear interpolated with hall sensor speed
 
     Commutation_state c = commutation;
@@ -261,6 +261,8 @@ float32 hall_sensor_get_E_angle_position(){
 }
 
 float32 hall_sensor_get_M_angle_position(){
+    // mechanical angle of rotor
+    //radian
     return hall_sensor_get_E_angle_position()/POLE_PAIR;
 }
 
