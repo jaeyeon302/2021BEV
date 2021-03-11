@@ -78,6 +78,105 @@ void Current_control_update_DQ(Current_controller* ccId,
 
 }
 
+
+void test_3phase_pole_voltage(float32 duty){
+    float32 highside_duty_ratio[3] = {0,0,0};
+    float32 lowside_duty_ratio[3] = {0,0,0};
+
+    if(duty>1.0) duty = 1.0;
+    if(duty<0.0) duty = 0.0;
+
+    highside_duty_ratio[phaseU] = duty;
+    lowside_duty_ratio[phaseU] = 1-duty;
+
+    highside_duty_ratio[phaseV] = duty;
+    lowside_duty_ratio[phaseV] = 1- duty;
+
+    highside_duty_ratio[phaseW] = duty;
+    lowside_duty_ratio[phaseW] = 1 - duty;
+
+
+    epwm1_set_duty(highside_duty_ratio[phaseU], lowside_duty_ratio[phaseU]);
+    epwm2_set_duty(highside_duty_ratio[phaseV], lowside_duty_ratio[phaseV]);
+    epwm3_set_duty(highside_duty_ratio[phaseW], lowside_duty_ratio[phaseW]);
+}
+
+void test_just_run(Commutation_state c){
+    float32 highside_duty_ratio[3] = {0,0,0};
+    float32 lowside_duty_ratio[3] = {0,0,0};
+    enum phase off_phase;
+    float32 duty = 0.25;
+    if(c.hu&!c.hv&c.hw){
+        // 1 0 1
+        // UH UL VH VL WH WL
+        // 0 0 1 0 0 1
+        // VH -> WL
+        off_phase = phaseU; // floating U
+        highside_duty_ratio[phaseV] = duty;
+        lowside_duty_ratio[phaseV] = 1.0-duty;
+        highside_duty_ratio[phaseW] = 0;
+        lowside_duty_ratio[phaseW] = 1;
+    }else if(c.hu & !c.hv & !c.hw){
+        // 1 0 0
+        // UH UL VH VL WH WL
+        // 0 1 1 0 0 0
+        // VH -> UL
+        off_phase = phaseW;
+        highside_duty_ratio[phaseV] = duty;
+        lowside_duty_ratio[phaseV] = 1.0-duty;
+        highside_duty_ratio[phaseU] = 0.0;
+        lowside_duty_ratio[phaseU] = 1.0;
+    }else if(c.hu & c.hv & !c.hw){
+        // 1 1 0
+        // UH UL VH VL WH WL
+        // 0 1 0 0 1 0
+        // WH -> UL
+        off_phase = phaseV;
+        highside_duty_ratio[phaseW] = duty;
+        lowside_duty_ratio[phaseW] = 1.0-duty;
+        highside_duty_ratio[phaseU] = 0.0;
+        lowside_duty_ratio[phaseU] = 1.0;
+    }else if(!c.hu & c.hv & !c.hw){
+        // 0 1 0
+        // UH UL VH VL WH WL
+        // 0 0 0 1 1 0
+        // WH -> VL
+        off_phase = phaseU;
+        highside_duty_ratio[phaseW] = duty;
+        lowside_duty_ratio[phaseW] = 1.0-duty;
+        highside_duty_ratio[phaseV] = 0.0;
+        lowside_duty_ratio[phaseV] = 1.0;
+    }else if(!c.hu & c.hv & c.hw){
+        // 0 1 1
+        // UH UL VH VL WH WL
+        // 1 0 0 1 0 0
+        // UH -> VL
+        off_phase = phaseW;
+        highside_duty_ratio[phaseU] = duty;
+        lowside_duty_ratio[phaseU] = 1.0-duty;
+        highside_duty_ratio[phaseV] = 0.0;
+        lowside_duty_ratio[phaseV] = 1.0;
+    }else if(!c.hu & !c.hv & c.hw){
+        // 0 0 1
+        // UH UL VH VL WH WL
+        // 1 0 0 0 0 1
+        // UH -> WL
+        off_phase = phaseV;
+        highside_duty_ratio[phaseU] = duty;
+        lowside_duty_ratio[phaseU] = 1.0-duty;
+        highside_duty_ratio[phaseW] = 0.0;
+        lowside_duty_ratio[phaseW] = 1.0;
+    }
+
+    // floating
+    highside_duty_ratio[off_phase] = 0.0;
+    lowside_duty_ratio[off_phase] = 0.0;
+
+    epwm1_set_duty(highside_duty_ratio[phaseU], lowside_duty_ratio[phaseU]);
+    epwm2_set_duty(highside_duty_ratio[phaseV], lowside_duty_ratio[phaseV]);
+    epwm3_set_duty(highside_duty_ratio[phaseW], lowside_duty_ratio[phaseW]);
+}
+
 void control_sinusoidal_BEMF(){
     // DQ รเ มฆพ๎
     Commutation_state c = hall_sensor_get_commutation();
@@ -227,7 +326,9 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
 
         //control_sinusoidal_BEMF();  // Q CURRENT CONTROL - PMSM
         //control_trapezoidal_BEMF(); // 3 CURRENT CONTROLLER 3 PHASE DC
-        control_trapezoidal_BEMF0(); // 1 CURRENT CCONTROLLER 3 PHASE DC
+        //control_trapezoidal_BEMF0(); // 1 CURRENT CCONTROLLER 3 PHASE DC
+        //test_just_run();//
+        //test_3phase_pole_voltage(0.25); // test Pole Voltage with duty
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }
 }
