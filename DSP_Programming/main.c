@@ -16,7 +16,7 @@ interrupt void timer0_isr(){
 }
 Commutation_state test_commutation;
 byte test;
-
+float32 test_float;
 int main(void){
     InitSysCtrl();
     InitGpio();
@@ -32,6 +32,12 @@ int main(void){
     EALLOW;
     // enable clock for timers
     // debugging timer
+    // GPIO SETUP
+    GpioCtrlRegs.GPAGMUX2.bit.GPIO31 = 0;
+    GpioCtrlRegs.GPAMUX2.bit.GPIO31 = 0;
+    GpioCtrlRegs.GPADIR.bit.GPIO31 = 1; // GPIO FOR OUTPUT
+
+
     CpuSysRegs.PCLKCR0.bit.CPUTIMER0 = 1;
     CpuSysRegs.PCLKCR0.bit.CPUTIMER1 = 1;
     InitCpuTimers(); // initialize global variable CpuTimer0, CpuTimer1, CpuTimer2
@@ -52,6 +58,6 @@ int main(void){
     CpuTimer0.RegsAddr->TCR.bit.TSS = 0; //StartCpuTimer0();
 
     while(1){
-
+        test_float = hall_sensor_get_angle_speed();
     }
 }
