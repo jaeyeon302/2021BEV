@@ -23,7 +23,7 @@ typedef struct {
 
 void Init_hall_sensor_ECAP(Uint16 pole_pair);
 void Start_hall_sensor_ECAP();
-Commutation_state hall_sensor_get_commutation();
+//Commutation_state hall_sensor_get_commutation();
 
 float32 hall_sensor_get_M_angle_position(); // radian
 float32 hall_sensor_get_E_angle_position(); // radian

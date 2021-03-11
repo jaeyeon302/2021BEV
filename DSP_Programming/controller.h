@@ -12,6 +12,7 @@
 #include "hall_sensor.h"
 #include "pwm_run.h"
 #include "adc_current.h"
+#include "math.h"
 
 // ±è»óÈÆ Àú ) ¸ðÅÍÁ¦¾î 119, 145 page
 #define Wc 1 //2*PI*100 // [Hz] control system bandwidth
@@ -26,7 +27,7 @@
 #define CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO 1.65 // [V]
 #define CURRENT_LIMIT_SCALE 0.33 //
 
-#define BAT_VOLTAGE  3.3 //48.0 //[V]
+#define BAT_VOLTAGE  48.0 //[V]
 #define BAT_VOLTAGE_SCALER ((float32)BAT_VOLTAGE/3.3) //
 #define ADC_Voltage2Current ((float32)1.0/CURRENT_SENSOR_VOLTAGE_SLOPE) // 1.65V -> MAX_CURRENT [A]
 

@@ -25,6 +25,137 @@ float32 phase_current_result[3]={0, 0, 0}; //[Ampere]
 float32 throttle_result = 0; //[Ampere]
 float32 battery_level_result = 0; // 0 - 48[V]
 
+
+/**********************************/
+// Eunjin's code
+
+
+
+float32 get_offset_voltage(float32 phase_a_v, float32 phase_b_v, float32 phase_c_v){
+
+    float32 vmax = 0;
+    float32 vmin = 0;
+    float32 vsn = 0;
+    if (phase_a_v > phase_b_v){
+        vmax = phase_a_v;
+        vmin = phase_b_v;
+    }
+    else{
+        vmax = phase_b_v;
+        vmin = phase_a_v;
+    }
+    if (phase_c_v > vmax){
+        vmax = phase_c_v;
+    }
+    if (phase_c_v < vmin){
+        vmin = phase_c_v;
+    }
+    vsn = 24-(vmax+vmin)/2;
+
+    return vsn;
+}
+
+float32 Vd_anti = 0.0;
+float32 Vd_ref = 0.0;
+float32 Vd_int = 0.0;
+
+float32 Vq_anti = 0.0;
+float32 Vq_ref = 0.0;
+float32 Vq_int = 0.0;
+
+void control_sinusoidal_BEMF(){
+    const float32 flux = 0.0021;
+    const float32 ls = 0.0001;
+    const float32 Vd_sat = 40;
+    const float32 Vq_sat = 40;
+
+    const float32 Kp_d = 1;//Lds*wc
+    const float32 Kp_q = 1;//Lqs*wc //0.1mH
+    const float32 Ki = 40;//Rc=0.1ohm, wc=(1/25)*10kHz=0.4kHz //Ki=Rc*wc=40
+    const float32 Ka_d = 1;//Ka_d = 1/Kp_d;
+    const float32 Ka_q = 1;//Kp_q;
+
+    // uvw -> DQ
+    float32 angle = hall_sensor_get_E_angle_position();
+    float32 Id,Iq, current_u, current_v, current_w;
+    current_u = phase_current_result[phaseU];
+    current_v = phase_current_result[phaseV];
+    current_w = phase_current_result[phaseW];
+    Id=(2/3)*(cos(angle)*current_u + cos(angle-2*PI/3)*current_v + cos(angle+2*PI/3)*current_w);
+    Iq=(2/3)*(-sin(angle)*current_u - sin(angle-2*PI/3)*current_v - sin(angle+2*PI/3)*current_w);
+
+
+    //PI
+    float32 Id_ref = 0.0;
+    float32 Iq_ref = throttle_result;
+
+    float32 Id_err = Id_ref - Id;
+    Vd_anti = Vd_ref - Vd_sat;
+    Vd_int += Ki*(Id_err - Ka_d*Vd_anti);
+    float32 Vd_fb = Vd_int + Kp_d*Id_err;
+
+
+    float32 Iq_err = Iq_ref - Iq;
+    Vq_anti = Vq_ref - Vq_sat;
+    Vq_int += Ki*(Id_err - Ka_q*Vq_anti);
+    float32 Vq_fb = Vq_int + Kp_q*Iq_err;
+
+    float32 wr = hall_sensor_get_angle_speed();
+    float32 Vd_ff = -ls*wr*Iq;
+    float32 Vq_ff = wr*ls*Id + wr*flux;
+
+    Vd_ref = Vd_fb + Vd_ff;
+    Vq_ref = Vq_fb + Vq_ff;
+
+
+    // DQ -> ABC
+    float32 vsn=0;
+    float32 Vdc=BAT_VOLTAGE;
+
+    float32 voltage_command[3] = {0,0,0};
+
+    //phase_voltage_command
+    voltage_command[phaseU] = cos(angle)*Vd_ref - sin(angle)*Vq_ref;
+    voltage_command[phaseV] = cos(angle-2*PI/3)*Vd_ref - sin(angle-2*PI/3)*Vq_ref;
+    voltage_command[phaseW] = cos(angle+2*PI/3)*Vd_ref - sin(angle+2*PI/3)*Vq_ref;
+
+    vsn = get_offset_voltage(voltage_command[phaseU], voltage_command[phaseV], voltage_command[phaseW]);
+
+    //voltage command
+    voltage_command[phaseU] = voltage_command[phaseU] + vsn;
+    voltage_command[phaseV] = voltage_command[phaseV] + vsn;
+    voltage_command[phaseW] = voltage_command[phaseW] + vsn;
+
+    //
+    voltage_command[phaseU] = (voltage_command[phaseU] > Vdc) ? Vdc : ((voltage_command[phaseU] < 0) ? 0 : voltage_command[phaseU]);
+    voltage_command[phaseV] = (voltage_command[phaseV] > Vdc) ? Vdc : ((voltage_command[phaseV] < 0) ? 0 : voltage_command[phaseV]);
+    voltage_command[phaseW] = (voltage_command[phaseW] > Vdc) ? Vdc : ((voltage_command[phaseW] < 0) ? 0 : voltage_command[phaseW]);
+
+    //최종 결과는 abc상 전압 duty
+
+    // GO TO EPWM
+    float32 highside_duty_ratio[3] = {0,0,0};
+    float32 lowside_duty_ratio[3] = {0,0,0};
+
+    highside_duty_ratio[phaseU] = voltage_command[phaseU]/Vdc;
+    lowside_duty_ratio[phaseU] = voltage_command[phaseU]/Vdc;
+    highside_duty_ratio[phaseV] = voltage_command[phaseV]/Vdc;
+    lowside_duty_ratio[phaseV] = voltage_command[phaseV]/Vdc;
+    highside_duty_ratio[phaseW] = voltage_command[phaseW]/Vdc;
+    lowside_duty_ratio[phaseW] = voltage_command[phaseW]/Vdc;
+
+    epwm1_set_duty(highside_duty_ratio[phaseU], lowside_duty_ratio[phaseU]);
+    epwm2_set_duty(highside_duty_ratio[phaseV], lowside_duty_ratio[phaseV]);
+    epwm3_set_duty(highside_duty_ratio[phaseW], lowside_duty_ratio[phaseW]);
+
+
+}
+
+
+/***********************************/
+
+
+
 void Current_control_init(Current_controller* cc){
     cc->I_ref = 0;
     cc->I_fb = 0;
@@ -176,11 +307,7 @@ void test_just_run(Commutation_state c){
     epwm2_set_duty(highside_duty_ratio[phaseV], lowside_duty_ratio[phaseV]);
     epwm3_set_duty(highside_duty_ratio[phaseW], lowside_duty_ratio[phaseW]);
 }
-
-void control_sinusoidal_BEMF(){
-    // DQ 축 제어
-    Commutation_state c = hall_sensor_get_commutation();
-}
+/*
 
 void control_trapezoidal_BEMF0(){
     Commutation_state c = hall_sensor_get_commutation();
@@ -286,7 +413,7 @@ void control_trapezoidal_BEMF0(){
     epwm1_set_duty(highside_duty_ratio[phaseU], lowside_duty_ratio[phaseU]);
     epwm2_set_duty(highside_duty_ratio[phaseV], lowside_duty_ratio[phaseV]);
     epwm3_set_duty(highside_duty_ratio[phaseW], lowside_duty_ratio[phaseW]);
-}
+}*/
 
 void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
     //float32 current = (adc_result_voltage - CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO ) * ADC_Voltage2Current; //[Ampere]
@@ -329,6 +456,8 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         //control_trapezoidal_BEMF0(); // 1 CURRENT CCONTROLLER 3 PHASE DC
         //test_just_run();//
         //test_3phase_pole_voltage(0.25); // test Pole Voltage with duty
+        throttle_result = 3; //[A]
+        control_sinusoidal_BEMF();
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }
 }

@@ -167,12 +167,12 @@ void Init_hall_sensor_ECAP(Uint16 pole_pair){
     GpioCtrlRegs.GPBGMUX2.bit.GPIO59 = 0; // use GPIO60 as gpio
     GpioCtrlRegs.GPBMUX2.bit.GPIO59 = 0;
     GpioCtrlRegs.GPBDIR.bit.GPIO59 = 1; // GPIO FOR OUTPUT
-    GpioDataRegs.GPBDAT.bit.GPIO59 = 0; // WRIE 0 TO GPIO 61
+    GpioDataRegs.GPBDAT.bit.GPIO59 = 0; // WRIE 0 TO GPIO 59
 
     InputXbarRegs.INPUT6SELECT = 59;
 
     SyncSocRegs.SYNCSELECT.bit.ECAP1SYNCIN = 6; // 6: EXTSYNCIN2 is selected for SYNCIN of ECAP1
-    SyncSocRegs.SYNCSELECT.bit.ECAP4SYNCIN = 4; // 6: EXTSYNCIN2 is selected for SYNCIN of ECAP4
+    SyncSocRegs.SYNCSELECT.bit.ECAP4SYNCIN = 4; // 6: ECAP1SYNCOUT is selected for SYNCIN of ECAP4
 
     configure_eCAP_INT();
     configure_eCAP(&ECap1Regs,rising);
@@ -203,9 +203,10 @@ void Start_hall_sensor_ECAP(){
     ECap5Regs.ECCTL2.bit.SYNCI_EN = 0;
     ECap6Regs.ECCTL2.bit.SYNCI_EN = 0;
 }
+/*
 Commutation_state hall_sensor_get_commutation(){
     return commutation;
-}
+}*/
 float32 hall_sensor_get_angle_speed(){
     // eCAP frequency : This counter provides the time-base for event captures, and is clocked via the system clock
     // return radian per second
