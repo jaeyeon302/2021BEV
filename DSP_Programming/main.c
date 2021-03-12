@@ -14,9 +14,10 @@ interrupt void timer0_isr(){
     GpioDataRegs.GPATOGGLE.bit.GPIO31 = 1; //flip the led state
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; // clear PIEACK.1 == PIEACK switch closed
 }
-Commutation_state test_commutation;
+
 byte test;
 float32 test_float;
+
 int main(void){
     InitSysCtrl();
     InitGpio();
@@ -49,7 +50,6 @@ int main(void){
     PieVectTable.TIMER0_INT = timer0_isr; // connect the isr
     EDIS;
 
-
     EINT;
     ERTM;
 
@@ -58,7 +58,6 @@ int main(void){
     CpuTimer0.RegsAddr->TCR.bit.TSS = 0; //StartCpuTimer0();
 
     while(1){
-        test_float = hall_sensor_get_angle_speed();
-        hall_sensor_update();
+
     }
 }
