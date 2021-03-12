@@ -10,6 +10,7 @@
 
 #include <F28x_Project.h>
 #include "hall_sensor.h"
+#include "hall_sensor2.h"
 #include "pwm_run.h"
 #include "adc_current.h"
 #include "math.h"

@@ -59,5 +59,6 @@ int main(void){
 
     while(1){
         test_float = hall_sensor_get_angle_speed();
+        hall_sensor_update();
     }
 }

@@ -492,11 +492,13 @@ void Ready_controller(){
     Init_3current_ADC( &control_state_update );
     Init_misc_ADC();
     Init_hall_sensor_ECAP(23);
+    Init_hall_sensor(23,10000);
     Init_3phase_ePWM();
 }
 
 void Start_controller(){
     Start_hall_sensor_ECAP();
     Start_3phase_ePWM();
-    //Start_3current_ADC();
+    Start_3current_ADC();
+    Start_hall_sensor();
 }

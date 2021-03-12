@@ -10,6 +10,7 @@ Commutation_state commutation;
 Uint32 last_timestamp = 0;
 Uint32 last_interrupt_period = 0;
 float32 POLE_PAIR = 1;
+float32 test_angle = 0;
 enum edge_event{rising=0, falling=1};
 
 void end_of_eCAP_INT(volatile struct ECAP_REGS* eCAP){
@@ -258,6 +259,7 @@ float32 hall_sensor_get_E_angle_position(){
     }
     float32 time = period_count/((float32)TSCTR_PER_SEC); //seconds
     angle += (( hall_sensor_get_angle_speed()*time  ));
+    test_angle = angle;
     return angle;
 }
 
