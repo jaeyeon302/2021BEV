@@ -31,13 +31,14 @@
 
 /* current sensor coefficents */
 #define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)-55.0 / 1000.0) // [V/A] WCS1800
-#define CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO 1.95 //1.65 //[V]
+//#define CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO 1.95 //1.65 //[V]
 
 /* Battery Coefficients */
 #define BAT_DEFAULT_VOLTAGE 48.0 // [V]
 #define BAT_VOLTAGE_SCALER ((float32)BAT_DEFAULT_VOLTAGE/3.3) //
 
 /* ADC coefficients and flags */
+#define MAX_OFFSET_SAMPLE_COUNT 1000
 #define ADC_Voltage2Current ((float32)1.0/CURRENT_SENSOR_VOLTAGE_SLOPE) // 1.65V(오프셋 제거된거) -> MAX_CURRENT [A]
 #define FLAG_ADC_CURRENT_PHASE_U_SAMPLED  0X01 // 0000 0001
 #define FLAG_ADC_CURRENT_PHASE_V_SAMPLED  0X02 // 0000 0010

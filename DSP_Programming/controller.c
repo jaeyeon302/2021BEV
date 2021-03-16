@@ -15,7 +15,7 @@ const unsigned char ADC_ALL_SAMPLED = (FLAG_ADC_CURRENT_PHASE_U_SAMPLED
                                       |FLAG_ADC_THROTTLE_SAMPLED
                                       |FLAG_ADC_BATTERY_SAMPLED);
 
-
+float32 offset_voltage[4] = {0, 0, 0, 0};
 float32 phase_current_result[3]={0, 0, 0}; //[Ampere]
 float32 throttle_result = 0; //[Ampere]
 float32 battery_level_result = 0; // 0 - 48[V]
@@ -202,27 +202,78 @@ void test_run_DQ(){
     epwm3_set_duty(duty_out[phaseW], 1-duty_out[phaseW]);
 }
 
+int offset_voltage_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
+    static Uint32 update_count_u = 0;
+    static Uint32 update_count_v = 0;
+    static Uint32 update_count_w = 0;
+    static Uint32 update_count_throttle = 0;
+    if(update_count_u < MAX_OFFSET_SAMPLE_COUNT ||
+       update_count_v < MAX_OFFSET_SAMPLE_COUNT ||
+       update_count_w < MAX_OFFSET_SAMPLE_COUNT ||
+       update_count_throttle < MAX_OFFSET_SAMPLE_COUNT){
+        switch(type){
+        case ADCcurrentPhaseU:
+            offset_voltage[ADCcurrentPhaseU] += adc_result_voltage;
+            update_count_u++;
+            break;
+        case ADCcurrentPhaseV:
+            offset_voltage[ADCcurrentPhaseV] += adc_result_voltage;
+            update_count_v++;
+            break;
+        case ADCcurrentPhaseW:
+            offset_voltage[ADCcurrentPhaseW] += adc_result_voltage;
+            update_count_w++;
+            break;
+        case ADCthrottle:
+            offset_voltage[ADCthrottle] += adc_result_voltage;
+            update_count_throttle++;
+            break;
+        default:
+            break;
+        }
+        return 1;
+    }else if(update_count_u == MAX_OFFSET_SAMPLE_COUNT &&
+             update_count_v == MAX_OFFSET_SAMPLE_COUNT &&
+             update_count_w == MAX_OFFSET_SAMPLE_COUNT &&
+             update_count_throttle == MAX_OFFSET_SAMPLE_COUNT){
+        offset_voltage[ADCcurrentPhaseU] = offset_voltage[ADCcurrentPhaseU]/((float32)MAX_OFFSET_SAMPLE_COUNT);
+        offset_voltage[ADCcurrentPhaseV] = offset_voltage[ADCcurrentPhaseV]/((float32)MAX_OFFSET_SAMPLE_COUNT);
+        offset_voltage[ADCcurrentPhaseW] = offset_voltage[ADCcurrentPhaseW]/((float32)MAX_OFFSET_SAMPLE_COUNT);
+        offset_voltage[ADCthrottle] = offset_voltage[ADCthrottle]/((float32)MAX_OFFSET_SAMPLE_COUNT);
+        update_count_u++;
+        update_count_v++;
+        update_count_w++;
+        update_count_throttle++;
+    }
+    return 0;
+}
+
 
 void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
-    float32 current = (adc_result_voltage - CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO ) * ADC_Voltage2Current; //[Ampere]
+    float32 current = 0.0;
+    int on_calculating_offset = offset_voltage_update(type, adc_result_voltage);
+    if(on_calculating_offset) return;
 
     switch(type){
     case ADCcurrentPhaseU:
         adc_result_flag |= FLAG_ADC_CURRENT_PHASE_U_SAMPLED;
+        current = (adc_result_voltage - offset_voltage[type])*ADC_Voltage2Current;
         phase_current_result[type] = current;
         break;
     case ADCcurrentPhaseV:
         adc_result_flag |= FLAG_ADC_CURRENT_PHASE_V_SAMPLED;
+        current = (adc_result_voltage - offset_voltage[type])*ADC_Voltage2Current;
         phase_current_result[type] = current;
         break;
     case ADCcurrentPhaseW:
         adc_result_flag |= FLAG_ADC_CURRENT_PHASE_W_SAMPLED;
+        current = (adc_result_voltage - offset_voltage[type])*ADC_Voltage2Current;
         phase_current_result[type] = current;
         break;
     case ADCthrottle:
         adc_result_flag |= FLAG_ADC_THROTTLE_SAMPLED;
+        throttle_result = (adc_result_voltage - offset_voltage[type])*ADC_Voltage2Current*CURRENT_LIMIT_SCALE;
         //FOR TEST
-        throttle_result = adc_result_voltage*ADC_Voltage2Current*CURRENT_LIMIT_SCALE;
         break;
     case ADCbatteryLevel:
         adc_result_flag |= FLAG_ADC_BATTERY_SAMPLED;
@@ -240,7 +291,7 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         //control_sinusoidal_BEMF();
         //test_run_DQ();
         //control_1phase(phase_current_result[phaseU], &CCtest);
-         test_poll_voltage(0.25);
+        test_poll_voltage(0.25);
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }
 }

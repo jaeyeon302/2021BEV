@@ -45,7 +45,7 @@ interrupt void ADC_phase_u_isr(){
 }
 interrupt void ADC_throttle_isr(){
     // result from SOC1/EOC1
-    (*adc_control_update)(ADCthrottle, AdccResultRegs.ADCRESULT1);
+    (*adc_control_update)(ADCthrottle, ADC_12bit_Ain2Voltage*AdccResultRegs.ADCRESULT1);
     end_of_ADCINT2(&AdccRegs);
 }
 
