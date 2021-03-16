@@ -144,7 +144,6 @@ void control_DQ(float32* phase_current,
 
 }
 void control_sinusoidal_BEMF(){
-    hall_sensor_update();
     float32 duty[3]={0,0,0};
     float32 angle=0;
     float32 angular_speed=0; // TODO update needed
@@ -284,6 +283,7 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
     }
 
     if(adc_result_flag == ADC_ALL_SAMPLED ){
+        hall_sensor_update();
         controlCycleCount++;
         /* 제어 코드는 여기서 호출되어야 한다 */
 
@@ -317,12 +317,11 @@ void Ready_controller(){
     Init_3current_ADC( &control_state_update );
     Init_misc_ADC();
     Init_3phase_ePWM();
-    Init_hall_sensor(23, 100000);
+    Init_hall_sensor(23);
 }
 
 void Start_controller(){
     Start_3phase_ePWM();
     Start_3current_ADC();
     Start_hall_sensor();
-
 }
