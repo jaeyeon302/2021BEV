@@ -23,15 +23,15 @@
 
 /* control coefficients */
 // ±è»óÈÆ Àú ) ¸ðÅÍÁ¦¾î 119, 145 page
-#define Wc 1
-#define Kp_DEFAULT Ls_DEFAULT*Wc
-#define Ki_DEFAULT Rs_DEFAULT*Wc
+#define Wc 1000
+#define Kp_DEFAULT 0.05//Ls_DEFAULT*Wc
+#define Ki_DEFAULT 250//Rs_DEFAULT*Wc
 #define Ka_DEFAULT 1/Kp_DEFAULT
 #define CURRENT_LIMIT_SCALE 0.33 // FOR SAFETY
 
 /* current sensor coefficents */
-#define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)55.0 / 1000.0) // [mV/A] WCS1800
-#define CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO 1.65 //[V]
+#define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)-55.0 / 1000.0) // [V/A] WCS1800
+#define CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO 1.95 //1.65 //[V]
 
 /* Battery Coefficients */
 #define BAT_DEFAULT_VOLTAGE 48.0 // [V]
@@ -48,6 +48,8 @@
 void Ready_controller();
 void Start_controller();
 
+void test_angle_update(float32 unit_angle);
+void test_I_update(float32 current);
 enum phase{phaseU=0,phaseV=1,phaseW=2, not=3};
 typedef struct _current_controller{
   float32 I_ref;
@@ -58,6 +60,7 @@ typedef struct _current_controller{
   float32 V_fb;
   float32 alpha, kp, ki, ka, kff;
 }Current_Controller;
+
 
 
 /*

@@ -9,9 +9,15 @@
  */
 #include "controller.h"
 
+int flag = 0;
 interrupt void timer0_isr(){
+    if(flag==0){
+        test_I_update(10);
+        flag = 1;
+    }
     CpuTimer0.InterruptCount++;
-    GpioDataRegs.GPATOGGLE.bit.GPIO31 = 1; //flip the led state
+    test_angle_update(PI/180);
+    GpioDataRegs.GPATOGGLE.bit.GPIO31 = 1; //flip the led state0
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; // clear PIEACK.1 == PIEACK switch closed
 }
 
@@ -42,7 +48,7 @@ int main(void){
     CpuSysRegs.PCLKCR0.bit.CPUTIMER0 = 1;
     CpuSysRegs.PCLKCR0.bit.CPUTIMER1 = 1;
     InitCpuTimers(); // initialize global variable CpuTimer0, CpuTimer1, CpuTimer2
-    ConfigCpuTimer(&CpuTimer0,200,1000000); // timer, 200MHz(PLL CLK), 1000000us
+    ConfigCpuTimer(&CpuTimer0,200,5000000); // timer, 200MHz(PLL CLK), 5000us
     IER |= (M_INT13 | M_INT1); // M_INT13 = CPU TIMER1 interrupt, M_INT1 = PIE1 (to enable timer0 interrupt)
 
     PieCtrlRegs.PIECTRL.bit.ENPIE = 1; // set total PIE Enable Register
@@ -52,6 +58,7 @@ int main(void){
 
     EINT;
     ERTM;
+
 
     Start_controller();
 

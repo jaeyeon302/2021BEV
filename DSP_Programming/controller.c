@@ -15,12 +15,12 @@ const unsigned char ADC_ALL_SAMPLED = (FLAG_ADC_CURRENT_PHASE_U_SAMPLED
                                       |FLAG_ADC_THROTTLE_SAMPLED
                                       |FLAG_ADC_BATTERY_SAMPLED);
 
+
 float32 phase_current_result[3]={0, 0, 0}; //[Ampere]
 float32 throttle_result = 0; //[Ampere]
 float32 battery_level_result = 0; // 0 - 48[V]
 
-Current_Controller CCd,CCq;
-
+Current_Controller CCd,CCq,CCtest;
 
 /**********************************/
 // Functions for DQ PI control with SVPWM
@@ -65,6 +65,26 @@ float32 SVPWM_offset_voltage(float32 phase_a_v,float32 phase_b_v, float32 phase_
     }
     return -(vmax+vmin)/2;
 }
+void control_1phase(float32 I_fb, Current_Controller* cc){
+    float32 I_err = 0.0;
+    float32 va;
+    float32 vdc = 48;
+    float32 duty = 0.0;
+
+    I_err = cc->I_ref - I_fb;
+    //cc->V_anti = cc->V_ref - cc->V_sat;
+    //cc->V_int += (cc->ki*(I_err - cc->ka*cc->V_anti))/10000.0;
+    cc->V_int += (cc->ki*I_err)/10000.0;
+    cc->V_fb = cc->V_int + cc->kp*I_err;
+
+    va = cc->V_fb;
+    va = (va > vdc) ? vdc : ((va < 0)? 0: va);
+    duty = va/vdc;
+
+    epwm1_set_duty(duty, 1-duty);
+    //epwm2_set_duty(duty, 1-duty);
+    //epwm3_set_duty(duty, 1-duty);
+}
 
 void control_DQ(float32* phase_current,
                 Current_Controller* ccId, Current_Controller* ccIq,
@@ -77,8 +97,10 @@ void control_DQ(float32* phase_current,
     float32 Ib_fb = phase_current[phaseV];
     float32 Ic_fb = phase_current[phaseW];
     float32 Id_fb, Iq_fb;
-    float32 I_err;
+    float32 I_err = 0.0;
 
+    Id_fb = 0.0;
+    Iq_fb = 0.0;
     float32 va,vb,vc, vsn, vdc, voffset_pole;
 
     abc2dq(Ia_fb, Ib_fb, Ic_fb, angle, &Id_fb, &Iq_fb);
@@ -124,10 +146,8 @@ void control_DQ(float32* phase_current,
 void control_sinusoidal_BEMF(){
     hall_sensor_update();
     float32 duty[3]={0,0,0};
-    float32 angle, angular_speed; // TODO update needed
-
-    CCd.I_ref = 0.0;
-    CCq.I_ref = throttle_result;
+    float32 angle=0;
+    float32 angular_speed=0; // TODO update needed
 
     // calculate Iabc->DQ->PI->DQ->Vabc
     control_DQ(phase_current_result,
@@ -141,6 +161,46 @@ void control_sinusoidal_BEMF(){
     epwm3_set_duty(duty[phaseW], 1-duty[phaseW]);
 }
 
+float32 test_angle = 0;
+void test_angle_update(float32 unit_angle){
+    test_angle += unit_angle;
+    if(test_angle >= 2*PI){
+        test_angle = 0;
+    }
+}
+void test_I_update(float32 current){
+    CCtest.I_ref = current;
+}
+void test_poll_voltage(float32 duty){
+    epwm1_set_duty(duty, 1-duty);
+    epwm2_set_duty(duty, 1-duty);
+    epwm3_set_duty(duty, 1-duty);
+}
+
+void test_run_DQ(){
+    const float32 id = 4;
+    const float32 vdc = 48;
+    float32 vd = 5; //Rs_DEFAULT*id;
+    float32 va, vb, vc, vsn;
+    float32 duty_out[3];
+    dq2abc(vd, 0, test_angle, &va, &vb, &vc);
+    vsn = SVPWM_offset_voltage(va,vb,vc);
+    va += (vsn+24);
+    vb += (vsn+24);
+    vc += (vsn+24);
+
+    va = (va > vdc) ? vdc : ((va < 0)? 0: va);
+    vb = (vb > vdc) ? vdc : ((vb < 0)? 0: vb);
+    vc = (vc > vdc) ? vdc : ((vc < 0)? 0: vc);
+
+    duty_out[phaseU] = va/vdc;
+    duty_out[phaseV] = vb/vdc;
+    duty_out[phaseW] = vc/vdc;
+
+    epwm1_set_duty(duty_out[phaseU], 1-duty_out[phaseU]);
+    epwm2_set_duty(duty_out[phaseV], 1-duty_out[phaseV]);
+    epwm3_set_duty(duty_out[phaseW], 1-duty_out[phaseW]);
+}
 
 
 void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
@@ -177,7 +237,10 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         /* 제어 코드는 여기서 호출되어야 한다 */
 
         //throttle_result = 3; //[A]
-        control_sinusoidal_BEMF();
+        //control_sinusoidal_BEMF();
+        //test_run_DQ();
+        //control_1phase(phase_current_result[phaseU], &CCtest);
+         test_poll_voltage(0.25);
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }
 }
@@ -198,6 +261,7 @@ void Ready_controller(){
     // ePWM -> ADC 호출 -> 제어함수 호출 구조이기 때문에, ADC를 ePWM보다 먼저 설정을 완료해야한다.
     Init_CC(&CCd, 40); // Vd_sat 40
     Init_CC(&CCq, 40); // Vq_sat 40
+    Init_CC(&CCtest, 48);
 
     Init_3current_ADC( &control_state_update );
     Init_misc_ADC();

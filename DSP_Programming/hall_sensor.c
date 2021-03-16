@@ -40,7 +40,8 @@ void Start_hall_sensor(){
     hall_state.hw = GpioDataRegs.GPDDAT.bit.GPIO105;
 }
 
-Hall_state hall_sensor_update(){
+int count=0;
+    Hall_state hall_sensor_update(){
     Hall_state state;
 
     state.hu = GpioDataRegs.GPBDAT.bit.GPIO60;
