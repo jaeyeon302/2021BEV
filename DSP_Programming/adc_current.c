@@ -197,7 +197,7 @@ void Init_misc_ADC(){
     volatile struct ADC_REGS* adc = &AdccRegs;;
     adc->ADCSOC1CTL.bit.ACQPS = 63; // 64 sysclk cycle = 320ns
     // configure SOC
-    adc->ADCSOC1CTL.bit.CHSEL = 5; // ADCINC5
+    adc->ADCSOC1CTL.bit.CHSEL = 4; // ADCINC4
     adc->ADCSOC1CTL.bit.TRIGSEL = 0; // ePWM1SOCB pulls the trigger of ADCSOC (1640 page tech doc)
     adc->ADCINTSOCSEL1.bit.SOC1 = 0; // disable all ADCINT for trigger
 
