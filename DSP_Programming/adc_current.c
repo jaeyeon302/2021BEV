@@ -189,7 +189,7 @@ void Init_misc_ADC(){
     configure_ADC(ADC_ADCD, 0xF, ADC_SIGNALMODE_DIFFERENTIAL, 5);
 
     EALLOW;
-    // Throttle ADC
+    /* Throttle ADC */
     // ready to read throttle level from differential ADCD.
     // ADC-SOC0 read current at ePWM TBCTR==0 using ePWMxSOCA.
     // ADC-SOC1 read throttle level at ePWM TBCTR==TBPRD  using ePWMxSOCB.

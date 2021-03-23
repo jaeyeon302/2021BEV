@@ -65,26 +65,7 @@ float32 SVPWM_offset_voltage(float32 phase_a_v,float32 phase_b_v, float32 phase_
     }
     return -(vmax+vmin)/2;
 }
-void control_1phase(float32 I_fb, Current_Controller* cc){
-    float32 I_err = 0.0;
-    float32 va;
-    float32 vdc = 48;
-    float32 duty = 0.0;
 
-    I_err = cc->I_ref - I_fb;
-    //cc->V_anti = cc->V_ref - cc->V_sat;
-    //cc->V_int += (cc->ki*(I_err - cc->ka*cc->V_anti))/10000.0;
-    cc->V_int += (cc->ki*I_err)/10000.0;
-    cc->V_fb = cc->V_int + cc->kp*I_err;
-
-    va = cc->V_fb;
-    va = (va > vdc) ? vdc : ((va < 0)? 0: va);
-    duty = va/vdc;
-
-    epwm1_set_duty(duty, 1-duty);
-    //epwm2_set_duty(duty, 1-duty);
-    //epwm3_set_duty(duty, 1-duty);
-}
 
 void control_DQ(float32* phase_current,
                 Current_Controller* ccId, Current_Controller* ccIq,
@@ -145,8 +126,8 @@ void control_DQ(float32* phase_current,
 }
 void control_sinusoidal_BEMF(){
     float32 duty[3]={0,0,0};
-    float32 angle=0;
-    float32 angular_speed=0; // TODO update needed
+    float32 angle = hall_sensor_get_E_angle_rad();
+    float32 angular_speed = hall_sensor_get_E_angular_speed();   //0; // TODO update needed
 
     // calculate Iabc->DQ->PI->DQ->Vabc
     control_DQ(phase_current_result,
@@ -160,6 +141,8 @@ void control_sinusoidal_BEMF(){
     epwm3_set_duty(duty[phaseW], 1-duty[phaseW]);
 }
 
+
+/*************TEST CODE******************/
 float32 test_angle = 0;
 void test_angle_update(float32 unit_angle){
     test_angle += unit_angle;
@@ -200,6 +183,28 @@ void test_run_DQ(){
     epwm2_set_duty(duty_out[phaseV], 1-duty_out[phaseV]);
     epwm3_set_duty(duty_out[phaseW], 1-duty_out[phaseW]);
 }
+void test_control_1phase(float32 vdc, float32 I_fb, Current_Controller* cc){
+    float32 I_err = 0.0;
+    float32 va;
+    float32 duty = 0.0;
+
+    I_err = cc->I_ref - I_fb;
+    // anti windup은 Vref가 48V를 돌파했을 때에만 적용되는 것이다.
+    //cc->V_anti = cc->V_ref - cc->V_sat;
+    //cc->V_int += (cc->ki*(I_err - cc->ka*cc->V_anti))/10000.0;
+    cc->V_int += (cc->ki*I_err)/10000.0; // 10kHz time duration = 1/0000 secs
+    cc->V_fb = cc->V_int + cc->kp*I_err;
+
+    va = cc->V_fb;
+    va = (va > vdc) ? vdc : ((va < 0)? 0: va);
+    duty = va/vdc;
+
+    epwm1_set_duty(duty, 1-duty);
+    //epwm2_set_duty(duty, 1-duty);
+    //epwm3_set_duty(duty, 1-duty);
+}
+
+/******************************************/
 
 int offset_voltage_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
     static Uint32 update_count_u = 0;
@@ -290,7 +295,7 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         //throttle_result = 3; //[A]
         //control_sinusoidal_BEMF();
         //test_run_DQ();
-        //control_1phase(phase_current_result[phaseU], &CCtest);
+        //test_control_1phase(48, phase_current_result[phaseU], &CCtest);
         test_poll_voltage(0.25);
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }
