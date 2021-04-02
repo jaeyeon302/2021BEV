@@ -19,11 +19,10 @@ typedef struct {
     float32 angle_E_rad;
     float64 Wr;
     int32 rotation;
-    Uint32 pole_pair;
 }Hall_state;
 
 
-void Init_hall_sensor(Uint16 pole_pair);
+void Init_hall_sensor();
 void Start_hall_sensor();
 
 Hall_state hall_sensor_update();

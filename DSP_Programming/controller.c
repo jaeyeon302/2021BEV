@@ -322,7 +322,7 @@ void Ready_controller(){
     Init_3current_ADC( &control_state_update );
     Init_misc_ADC();
     Init_3phase_ePWM();
-    Init_hall_sensor(23);
+    Init_hall_sensor();
 }
 
 void Start_controller(){

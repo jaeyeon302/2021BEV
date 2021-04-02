@@ -6,6 +6,9 @@
  */
 
 #include <hall_sensor.h>
+
+#define POLE_PAIR 23
+
 Hall_state hall_state;
 float64 time1 = 0;
 interrupt void ecap1_isr_Wr_update(void){
@@ -19,8 +22,7 @@ interrupt void ecap1_isr_Wr_update(void){
 }
 
 
-void Init_hall_sensor(Uint16 pole_pair){
-    hall_state.pole_pair = pole_pair;
+void Init_hall_sensor(){
 
     EALLOW;
     // H_U
@@ -265,7 +267,7 @@ float64 hall_sensor_get_E_angle_rad(){
 
 float64 hall_sensor_get_M_angle_rad(){
     float64 electrical_angle = hall_sensor_get_E_angle_rad();
-    float64 mechanical_angle = electrical_angle+(TWOPI*hall_state.rotation);
+    float64 mechanical_angle = (electrical_angle+(TWOPI*hall_state.rotation))/POLE_PAIR;
     if(mechanical_angle > TWOPI){
         // angle = angle - 2PI*R
         // R = number of forward rotation
@@ -281,5 +283,5 @@ float64 hall_sensor_get_E_angular_speed(){
     return hall_state.Wr;
 }
 float64 hall_sensor_get_M_angular_speed(){
-    return hall_state.Wr/hall_state.pole_pair;
+    return hall_state.Wr/POLE_PAIR;
 }

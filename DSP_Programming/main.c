@@ -15,7 +15,7 @@ interrupt void timer0_debugging_isr(){
     GpioDataRegs.GPATOGGLE.bit.GPIO31 = 1; //flip the led state0
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; // clear PIEACK.1 == PIEACK switch closed
 }
-
+float test;
 
 int main(void){
     InitSysCtrl();

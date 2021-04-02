@@ -35,16 +35,17 @@ void epwm_set_duty(volatile struct EPWM_REGS* epwm,
         cmpa = (Uint16)(TB_PRD - a_duty_ratio*TB_PRD); // bye bye Decimal places
     }
 
+    /*
     if(b_duty_ratio <= 0.0){
         cmpb = 0; //turn off
     }else if(b_duty_ratio >= 1.0){
         cmpb = TB_PRD-1;
     }else if(b_duty_ratio>0.0 && b_duty_ratio<1.0){
         cmpb = (Uint16)( ((float32)TB_PRD)*b_duty_ratio);
-    }
+    }*/
 
     epwm->CMPA.bit.CMPA = cmpa; // pwmA : rising on TBCTR = CMPA up-count, falling on TBCTR = CMPA down-count
-    epwm->CMPB.bit.CMPB = cmpb; // pwmB : rising on TBCTR = CMPB down-count, falling on TBCTR = CMPB up-count
+    epwm->CMPB.bit.CMPB = cmpa; // pwmB : rising on TBCTR = CMPB down-count, falling on TBCTR = CMPB up-count
 }
 float32 epwm_get_minimum_duty_ratio(){
     return 1/((float32)TB_PRD);
@@ -147,8 +148,8 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     // Set actions
     // event A : TBCTR = CMPA, event B : TBCTR = CMPB
     // 포토 커플러로 인해서 값이 inverting 해서 들어가게 됨. 그래서 highside를 downcount일 때 uprising 해줘야 inverting해서 실제 mosfet gate 신호는 falling 됨
-    epwm->AQCTLA.bit.CAU = 1; // set PWM1A HIGH on event A, Up count
-    epwm->AQCTLA.bit.CAD = 2; // clear PWM1A LOW on event A, down count
+    epwm->AQCTLA.bit.CAU = 2; // set PWM1A HIGH on event A, Up count
+    epwm->AQCTLA.bit.CAD = 1; // clear PWM1A LOW on event A, down count
     epwm->AQCTLB.bit.CBU = 2; // set PWM1B LOW on event B, up count
     epwm->AQCTLB.bit.CBD = 1; // set PWM1B HIGH on event B, down ccount
 
@@ -195,7 +196,7 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     epwm->DBCTL.bit.SHDWDBREDMODE=0;
     epwm->DBCTL2.bit.SHDWDBCTLMODE=0;
 
-    epwm->DBCTL.bit.POLSEL = 2;
+    epwm->DBCTL.bit.POLSEL = 1;
     epwm->DBCTL.bit.OUT_MODE = 3;
 
     epwm->DBRED.bit.DBRED = 100; //TBCLK=50MHz, delay 2us
