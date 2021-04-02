@@ -151,7 +151,7 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     epwm->AQCTLA.bit.CAU = 2; // set PWM1A HIGH on event A, Up count
     epwm->AQCTLA.bit.CAD = 1; // clear PWM1A LOW on event A, down count
     epwm->AQCTLB.bit.CBU = 2; // set PWM1B LOW on event B, up count
-    epwm->AQCTLB.bit.CBD = 1; // set PWM1B HIGH on event B, down ccount
+    epwm->AQCTLB.bit.CBD = 1; // clear PWM1B HIGH on event B, down ccount
 
     // Set Default Compare Values
     // photo coupler로 인해서 값이 inverting 해서 들어가게 됨

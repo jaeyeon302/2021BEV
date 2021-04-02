@@ -296,7 +296,7 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         //control_sinusoidal_BEMF();
         //test_run_DQ();
         //test_control_1phase(48, phase_current_result[phaseU], &CCtest);
-        test_poll_voltage(0.25);
+        test_poll_voltage(0.05);
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }
 }
