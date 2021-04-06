@@ -23,14 +23,14 @@
 
 /* control coefficients */
 // ±è»óÈÆ Àú ) ¸ðÅÍÁ¦¾î 119, 145 page
-#define Wc 1000
+#define Wc 500
 #define Kp_DEFAULT 0.05//Ls_DEFAULT*Wc
-#define Ki_DEFAULT 250//Rs_DEFAULT*Wc
+#define Ki_DEFAULT 50//Rs_DEFAULT*Wc = 50
 #define Ka_DEFAULT 1/Kp_DEFAULT
 #define CURRENT_LIMIT_SCALE 0.33 // FOR SAFETY
 
 /* current sensor coefficents */
-#define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)-55.0 / 1000.0) // [V/A] WCS1800
+#define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)55.0 / 1000.0) // [V/A] WCS1800
 //#define CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO 1.95 //1.65 //[V]
 
 /* Battery Coefficients */

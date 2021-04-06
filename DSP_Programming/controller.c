@@ -22,6 +22,8 @@ float32 battery_level_result = 0; // 0 - 48[V]
 
 Current_Controller CCd,CCq,CCtest;
 
+float32 testduty = 0.1;
+
 /**********************************/
 // Functions for DQ PI control with SVPWM
 void Init_CC(Current_Controller* cc, float32 v_sat ){
@@ -159,13 +161,11 @@ void test_poll_voltage(float32 duty){
     epwm3_set_duty(duty, 1-duty);
 }
 
-void test_run_DQ(){
-    const float32 id = 4;
-    const float32 vdc = 48;
-    float32 vd = 5; //Rs_DEFAULT*id;
+void test_V_DQ(float32 vdr, float32 angle_rad){
     float32 va, vb, vc, vsn;
     float32 duty_out[3];
-    dq2abc(vd, 0, test_angle, &va, &vb, &vc);
+
+    dq2abc(vdr,0,angle_rad, &va, &vb, &vc);
     vsn = SVPWM_offset_voltage(va,vb,vc);
     va += (vsn+24);
     vb += (vsn+24);
@@ -183,6 +183,37 @@ void test_run_DQ(){
     epwm2_set_duty(duty_out[phaseV], 1-duty_out[phaseV]);
     epwm3_set_duty(duty_out[phaseW], 1-duty_out[phaseW]);
 }
+
+
+void test_Id_DQ(float32 vdc,  float32 Id_fb, float32 angle_rad, Current_Controller* ccId){
+    float32 I_err = 0.0;
+    float32 va,vb,vc,vsn;
+    float32 duty_out[3];
+
+    I_err = ccId->I_ref - I_fb;
+    ccId->V_int += (ccId->ki*I_err)/10000.0; // 10kHz time duration = 1/0000 secs
+
+    vdr = cc->V_fb;
+
+    dq2abc(vdr,0,angle_rad, &va, &vb, &vc);
+    vsn = SVPWM_offset_voltage(va,vb,vc);
+    va += (vsn+24);
+    vb += (vsn+24);
+    vc += (vsn+24);
+
+    va = (va > vdc) ? vdc : ((va < 0)? 0: va);
+    vb = (vb > vdc) ? vdc : ((vb < 0)? 0: vb);
+    vc = (vc > vdc) ? vdc : ((vc < 0)? 0: vc);
+
+    duty_out[phaseU] = va/vdc;
+    duty_out[phaseV] = vb/vdc;
+    duty_out[phaseW] = vc/vdc;
+
+    epwm1_set_duty(duty_out[phaseU], 1-duty_out[phaseU]);
+    epwm2_set_duty(duty_out[phaseV], 1-duty_out[phaseV]);
+    epwm3_set_duty(duty_out[phaseW], 1-duty_out[phaseW]);
+}
+
 void test_control_1phase(float32 vdc, float32 I_fb, Current_Controller* cc){
     float32 I_err = 0.0;
     float32 va;
@@ -236,19 +267,24 @@ int offset_voltage_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
             break;
         }
         return 1;
-    }else if(update_count_u == MAX_OFFSET_SAMPLE_COUNT &&
-             update_count_v == MAX_OFFSET_SAMPLE_COUNT &&
-             update_count_w == MAX_OFFSET_SAMPLE_COUNT &&
-             update_count_throttle == MAX_OFFSET_SAMPLE_COUNT){
+    }
+    if(update_count_u == MAX_OFFSET_SAMPLE_COUNT){
         offset_voltage[ADCcurrentPhaseU] = offset_voltage[ADCcurrentPhaseU]/((float32)MAX_OFFSET_SAMPLE_COUNT);
-        offset_voltage[ADCcurrentPhaseV] = offset_voltage[ADCcurrentPhaseV]/((float32)MAX_OFFSET_SAMPLE_COUNT);
-        offset_voltage[ADCcurrentPhaseW] = offset_voltage[ADCcurrentPhaseW]/((float32)MAX_OFFSET_SAMPLE_COUNT);
-        offset_voltage[ADCthrottle] = offset_voltage[ADCthrottle]/((float32)MAX_OFFSET_SAMPLE_COUNT);
         update_count_u++;
+    }
+    if(update_count_v == MAX_OFFSET_SAMPLE_COUNT){
+        offset_voltage[ADCcurrentPhaseV] = offset_voltage[ADCcurrentPhaseV]/((float32)MAX_OFFSET_SAMPLE_COUNT);
         update_count_v++;
+    }
+    if(update_count_w == MAX_OFFSET_SAMPLE_COUNT){
+        offset_voltage[ADCcurrentPhaseW] = offset_voltage[ADCcurrentPhaseW]/((float32)MAX_OFFSET_SAMPLE_COUNT);
         update_count_w++;
+    }
+    if(update_count_throttle == MAX_OFFSET_SAMPLE_COUNT){
+        offset_voltage[ADCthrottle] = offset_voltage[ADCthrottle]/((float32)MAX_OFFSET_SAMPLE_COUNT);
         update_count_throttle++;
     }
+
     return 0;
 }
 
@@ -296,7 +332,7 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         //control_sinusoidal_BEMF();
         //test_run_DQ();
         //test_control_1phase(48, phase_current_result[phaseU], &CCtest);
-        test_poll_voltage(0.05);
+        test_poll_voltage(testduty);
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }
 }
