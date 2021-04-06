@@ -22,7 +22,10 @@ float32 battery_level_result = 0; // 0 - 48[V]
 
 Current_Controller CCd,CCq,CCtest;
 
+float32 testvd = 0.0;
+float32 testvq = 0.0;
 float32 testduty = 0.1;
+float32 testangle = 0;
 
 /**********************************/
 // Functions for DQ PI control with SVPWM
@@ -145,11 +148,10 @@ void control_sinusoidal_BEMF(){
 
 
 /*************TEST CODE******************/
-float32 test_angle = 0;
 void test_angle_update(float32 unit_angle){
-    test_angle += unit_angle;
-    if(test_angle >= 2*PI){
-        test_angle = 0;
+    testangle += unit_angle;
+    if(testangle >= 2*PI){
+        testangle = 0;
     }
 }
 void test_I_update(float32 current){
@@ -161,11 +163,11 @@ void test_poll_voltage(float32 duty){
     epwm3_set_duty(duty, 1-duty);
 }
 
-void test_V_DQ(float32 vdr, float32 angle_rad){
+float32 duty_out[3];
+void test_V_DQ(float32 vdr, float32 vqr, float32 angle_rad, float32 vdc){
     float32 va, vb, vc, vsn;
-    float32 duty_out[3];
 
-    dq2abc(vdr,0,angle_rad, &va, &vb, &vc);
+    dq2abc(vdr,vqr,angle_rad, &va, &vb, &vc);
     vsn = SVPWM_offset_voltage(va,vb,vc);
     va += (vsn+24);
     vb += (vsn+24);
@@ -187,13 +189,13 @@ void test_V_DQ(float32 vdr, float32 angle_rad){
 
 void test_Id_DQ(float32 vdc,  float32 Id_fb, float32 angle_rad, Current_Controller* ccId){
     float32 I_err = 0.0;
-    float32 va,vb,vc,vsn;
+    float32 vdr, va, vb, vc, vsn;
     float32 duty_out[3];
 
-    I_err = ccId->I_ref - I_fb;
+    I_err = ccId->I_ref - Id_fb;
     ccId->V_int += (ccId->ki*I_err)/10000.0; // 10kHz time duration = 1/0000 secs
 
-    vdr = cc->V_fb;
+    vdr = ccId->V_fb;
 
     dq2abc(vdr,0,angle_rad, &va, &vb, &vc);
     vsn = SVPWM_offset_voltage(va,vb,vc);
@@ -328,11 +330,11 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         controlCycleCount++;
         /* 제어 코드는 여기서 호출되어야 한다 */
 
-        //throttle_result = 3; //[A]
-        //control_sinusoidal_BEMF();
-        //test_run_DQ();
         //test_control_1phase(48, phase_current_result[phaseU], &CCtest);
-        test_poll_voltage(testduty);
+        //test_poll_voltage(testduty);
+
+        test_V_DQ(testvd,testvq, testangle,48);
+
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }
 }
