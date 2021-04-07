@@ -17,8 +17,8 @@
 #include "constants.h"
 
 /* motor coefficients */
-#define Ls_DEFAULT ((float32)0.1/1000) //[mH]
-#define Rs_DEFAULT ((float32)0.1) // [Ohm]
+#define Ls_DEFAULT ((float32)0.1/1000) //[H]
+#define Rs_DEFAULT ((float32)0.5) // [Ohm]
 #define flux_DEFAULT 0.0021
 
 /* control coefficients */

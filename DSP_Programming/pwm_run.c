@@ -155,8 +155,8 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
 
     // Set Default Compare Values
     // photo coupler로 인해서 값이 inverting 해서 들어가게 됨
-    epwm->CMPA.bit.CMPA = 0; //TB_PRD+1; // turn off
-    epwm->CMPB.bit.CMPB = TB_PRD+1; //0; // turn off
+    epwm->CMPA.bit.CMPA = TB_PRD+1; // turn off
+    epwm->CMPB.bit.CMPB = //TB_PRD+1; //0; // turn off
     // WTFWTFWTF 왜 CMPA 이벤트를 발생하게 하면 Carrier 주파수가 바뀌는가?????????
     // CMPA 값을 바꾸면 Carrier wave의 주파수가 바뀜
     // 문제해결 :
@@ -207,12 +207,15 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
 
 void Init_3phase_ePWM(){
     EALLOW;
+    // phase U
     GpioCtrlRegs.GPAGMUX1.bit.GPIO0=0;
     GpioCtrlRegs.GPAGMUX1.bit.GPIO1=0;
     InitEPwm1Gpio();
+    // phase V
     GpioCtrlRegs.GPAGMUX1.bit.GPIO2=0;
     GpioCtrlRegs.GPAGMUX1.bit.GPIO3=0;
     InitEPwm2Gpio();
+    // phase W
     GpioCtrlRegs.GPAGMUX1.bit.GPIO4=0;
     GpioCtrlRegs.GPAGMUX1.bit.GPIO5=0;
     InitEPwm3Gpio();

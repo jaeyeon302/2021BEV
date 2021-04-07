@@ -244,45 +244,38 @@ int offset_voltage_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
     static Uint32 update_count_v = 0;
     static Uint32 update_count_w = 0;
     static Uint32 update_count_throttle = 0;
-    if(update_count_u < MAX_OFFSET_SAMPLE_COUNT ||
-       update_count_v < MAX_OFFSET_SAMPLE_COUNT ||
-       update_count_w < MAX_OFFSET_SAMPLE_COUNT ||
-       update_count_throttle < MAX_OFFSET_SAMPLE_COUNT){
-        switch(type){
-        case ADCcurrentPhaseU:
-            offset_voltage[ADCcurrentPhaseU] += adc_result_voltage;
-            update_count_u++;
-            break;
-        case ADCcurrentPhaseV:
-            offset_voltage[ADCcurrentPhaseV] += adc_result_voltage;
-            update_count_v++;
-            break;
-        case ADCcurrentPhaseW:
-            offset_voltage[ADCcurrentPhaseW] += adc_result_voltage;
-            update_count_w++;
-            break;
-        case ADCthrottle:
-            offset_voltage[ADCthrottle] += adc_result_voltage;
-            update_count_throttle++;
-            break;
-        default:
-            break;
-        }
+
+    if(update_count_u < MAX_OFFSET_SAMPLE_COUNT && type == ADCcurrentPhaseU){
+        offset_voltage[ADCcurrentPhaseU] += adc_result_voltage;
+        update_count_u++;
         return 1;
-    }
-    if(update_count_u == MAX_OFFSET_SAMPLE_COUNT){
+    }else if(update_count_u == MAX_OFFSET_SAMPLE_COUNT){
         offset_voltage[ADCcurrentPhaseU] = offset_voltage[ADCcurrentPhaseU]/((float32)MAX_OFFSET_SAMPLE_COUNT);
         update_count_u++;
     }
-    if(update_count_v == MAX_OFFSET_SAMPLE_COUNT){
+
+    if(update_count_v < MAX_OFFSET_SAMPLE_COUNT && type == ADCcurrentPhaseV){
+        offset_voltage[ADCcurrentPhaseV] += adc_result_voltage;
+        update_count_v++;
+        return 1;
+    }else if(update_count_v == MAX_OFFSET_SAMPLE_COUNT){
         offset_voltage[ADCcurrentPhaseV] = offset_voltage[ADCcurrentPhaseV]/((float32)MAX_OFFSET_SAMPLE_COUNT);
         update_count_v++;
     }
-    if(update_count_w == MAX_OFFSET_SAMPLE_COUNT){
+
+    if(update_count_w < MAX_OFFSET_SAMPLE_COUNT && type == ADCcurrentPhaseW){
+        offset_voltage[ADCcurrentPhaseW] += adc_result_voltage;
+        update_count_w++;
+        return 1;
+    }else if(update_count_w == MAX_OFFSET_SAMPLE_COUNT){
         offset_voltage[ADCcurrentPhaseW] = offset_voltage[ADCcurrentPhaseW]/((float32)MAX_OFFSET_SAMPLE_COUNT);
         update_count_w++;
     }
-    if(update_count_throttle == MAX_OFFSET_SAMPLE_COUNT){
+
+    if(update_count_throttle < MAX_OFFSET_SAMPLE_COUNT && type == ADCthrottle){
+        offset_voltage[ADCthrottle] += adc_result_voltage;
+        update_count_throttle++;
+    }else if(update_count_throttle == MAX_OFFSET_SAMPLE_COUNT){
         offset_voltage[ADCthrottle] = offset_voltage[ADCthrottle]/((float32)MAX_OFFSET_SAMPLE_COUNT);
         update_count_throttle++;
     }
@@ -330,10 +323,9 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         controlCycleCount++;
         /* 제어 코드는 여기서 호출되어야 한다 */
 
-        //test_control_1phase(48, phase_current_result[phaseU], &CCtest);
+        test_control_1phase(CCtest.V_sat, phase_current_result[phaseU], &CCtest);
         //test_poll_voltage(testduty);
-
-        test_V_DQ(testvd,testvq, testangle,48);
+       // test_V_DQ(testvd,testvq, testangle,48);
 
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }
@@ -355,12 +347,14 @@ void Ready_controller(){
     // ePWM -> ADC 호출 -> 제어함수 호출 구조이기 때문에, ADC를 ePWM보다 먼저 설정을 완료해야한다.
     Init_CC(&CCd, 40); // Vd_sat 40
     Init_CC(&CCq, 40); // Vq_sat 40
-    Init_CC(&CCtest, 48);
+    Init_CC(&CCtest, 20);
 
     Init_3current_ADC( &control_state_update );
     Init_misc_ADC();
     Init_3phase_ePWM();
     Init_hall_sensor();
+
+
 }
 
 void Start_controller(){
