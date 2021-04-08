@@ -15,6 +15,9 @@
 #include "adc_current.h"
 #include "math.h"
 #include "constants.h"
+/* */
+#define CONTROL_FREQ 10000.0
+#define CONTROL_PRD (1.0/CONTROL_FREQ)
 
 /* motor coefficients */
 #define Ls_DEFAULT ((float32)0.1/1000) //[H]
@@ -23,13 +26,13 @@
 
 /* control coefficients */
 // ±è»óÈÆ Àú ) ¸ðÅÍÁ¦¾î 119, 145 page
-#define Wc 500
+#define Wc 50
 #define Kp_DEFAULT 0.05//Ls_DEFAULT*Wc
 #define Ki_DEFAULT 50//Rs_DEFAULT*Wc = 50
 #define Ka_DEFAULT 1/Kp_DEFAULT
 #define CURRENT_LIMIT_SCALE 0.33 // FOR SAFETY
 
-/* current sensor coefficents */
+/* current sensor coefficients */
 #define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)55.0 / 1000.0) // [V/A] WCS1800
 //#define CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO 1.95 //1.65 //[V]
 
@@ -45,11 +48,13 @@
 #define FLAG_ADC_CURRENT_PHASE_W_SAMPLED  0X04 // 0000 0100
 #define FLAG_ADC_THROTTLE_SAMPLED  0x08    // 0000 1000
 #define FLAG_ADC_BATTERY_SAMPLED  0x10  // 0001 0000
+#define FLAG_ALIGNED 0X20 // 0010 0000
 
 void Ready_controller();
 void Start_controller();
 
 void test_angle_update(float32 unit_angle);
+void test_Idq_update(float32 Id_ref, float32 Iq_ref);
 void test_I_update(float32 current);
 enum phase{phaseU=0,phaseV=1,phaseW=2, not=3};
 typedef struct _current_controller{
@@ -63,17 +68,4 @@ typedef struct _current_controller{
 }Current_Controller;
 
 
-
-/*
-typedef struct _current_controller{
-    float32 I_ref, I_fb, I_err;
-    float32 alpha, Kp, Ki, Ka, K_ff;
-    float32 V_err_integ;
-    float32 V_ref;
-    float32 V_ref_fb; //voltage reference feedforward
-    float32 V_ref_ff; // voltage reference feedback
-    float32 V_sat; // saturation voltage
-    float32 V_anti; // anti windup
-}Current_controller;
-*/
 #endif /* CONTROLLER_ */

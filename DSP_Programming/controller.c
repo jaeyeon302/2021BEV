@@ -24,9 +24,12 @@ Current_Controller CCd,CCq,CCtest;
 
 float32 testvd = 0.0;
 float32 testvq = 0.0;
-float32 testduty = 0.1;
+float32 testduty0 = 0.5;
+float32 testduty1 = 0.5;
+float32 testduty2 = 0.5;
 float32 testangle = 0;
-
+float32 testAlignId = 2;
+float32 freq = 1;
 /**********************************/
 // Functions for DQ PI control with SVPWM
 void Init_CC(Current_Controller* cc, float32 v_sat ){
@@ -43,13 +46,13 @@ void Init_CC(Current_Controller* cc, float32 v_sat ){
     cc->kff = 0.0;
 }
 void abc2dq(float32 a, float32 b, float32 c, float32 angle_rad,float32* d, float32* q){
-    *d=(2/3)*(cos(angle_rad)*a + cos(angle_rad-2*PI/3)*b + cos(angle_rad+2*PI/3)*c);
-    *q=(2/3)*(-sin(angle_rad)*a - sin(angle_rad-2*PI/3)*b - sin(angle_rad+2*PI/3)*c);
+    *d=(2.0/3.0)*(cos(angle_rad)*a + cos(angle_rad-2.0*PI/3.0)*b + cos(angle_rad+2.0*PI/3.0)*c);
+    *q=(2.0/3.0)*(-sin(angle_rad)*a - sin(angle_rad-2.0*PI/3.0)*b - sin(angle_rad+2.0*PI/3.0)*c);
 }
 void dq2abc(float32 d, float32 q, float32 angle_rad, float32* a, float32* b ,float32* c){
     *a = cos(angle_rad)*d - sin(angle_rad)*q;
-    *b = cos(angle_rad - 2*PI/3)*d - sin(angle_rad - 2*PI/3)*q;
-    *c = cos(angle_rad + 2*PI/3)*d - sin(angle_rad + 2*PI/3)*q;
+    *b = cos(angle_rad - 2.0*PI/3.0)*d - sin(angle_rad - 2.0*PI/3.0)*q;
+    *c = cos(angle_rad + 2.0*PI/3.0)*d - sin(angle_rad + 2.0*PI/3.0)*q;
 }
 float32 SVPWM_offset_voltage(float32 phase_a_v,float32 phase_b_v, float32 phase_c_v){
     float32 vmax = 0;
@@ -71,51 +74,151 @@ float32 SVPWM_offset_voltage(float32 phase_a_v,float32 phase_b_v, float32 phase_
     return -(vmax+vmin)/2;
 }
 
+//
+//void control_DQ(float32* phase_current,
+//                Current_Controller* ccId, Current_Controller* ccIq,
+//                float32 angle, float32 angular_speed,
+//                float32 max_v_pole,
+//                float32* duty_out){
+//    // angle: rad
+//    // angle_speed : rad/sec
+//    float32 Ia_fb = phase_current[phaseU];
+//    float32 Ib_fb = phase_current[phaseV];
+//    float32 Ic_fb = phase_current[phaseW];
+//    float32 Id_fb, Iq_fb;
+//    float32 I_err = 0.0;
+//
+//    Id_fb = 0.0;
+//    Iq_fb = 0.0;
+//    float32 va,vb,vc, vsn, vdc, voffset_pole;
+//
+//    abc2dq(Ia_fb, Ib_fb, Ic_fb, angle, &Id_fb, &Iq_fb);
+//
+//    // control D
+//    I_err = ccId->I_ref - Id_fb;
+//    ccId->V_anti = ccId->V_ref - ccId->V_sat;
+//    ccId->V_int += ccId->ki*(I_err - ccId->ka*ccId->V_anti);
+//    ccId->V_fb = ccId->V_int + ccId->kp*I_err;
+//
+//    // control Q
+//    I_err = ccIq->I_ref - Iq_fb;
+//    ccIq->V_anti = ccIq->V_ref - ccIq->V_sat;
+//    ccIq->V_int += ccIq->ki*(I_err - ccIq->ka*ccIq->V_anti);
+//    ccIq->V_fb = ccIq->V_int + ccIq->kp*I_err;
+//
+//    ccId->V_ref = ccId->V_fb + (-Ls_DEFAULT*angular_speed*Iq_fb); // add Vd feeadforward
+//    ccIq->V_ref = ccIq->V_fb + (angular_speed*Ls_DEFAULT*Id_fb + angular_speed*flux_DEFAULT); // Vq feedforward
+//
+//    dq2abc(ccId->V_ref, ccIq->V_ref, angle, &va, &vb, &vc);
+//    vsn = SVPWM_offset_voltage(va,vb,vc);
+//
+//    vdc = max_v_pole;
+//    voffset_pole = vdc/2;
+//
+//    vsn += voffset_pole;
+//
+//    va += vsn;
+//    vb += vsn;
+//    vc += vsn;
+//
+//    va = (va > vdc) ? vdc : ((va < 0)? 0: va);
+//    vb = (vb > vdc) ? vdc : ((vb < 0)? 0: vb);
+//    vc = (vc > vdc) ? vdc : ((vc < 0)? 0: vc);
+//
+//    duty_out[phaseU] = va/vdc;
+//    duty_out[phaseV] = vb/vdc;
+//    duty_out[phaseW] = vc/vdc;
+//
+//}
+//void control_sinusoidal_BEMF(){
+//    float32 duty[3]={0,0,0};
+//    float32 angle = hall_sensor_get_E_angle_rad();
+//    float32 angular_speed = hall_sensor_get_E_angular_speed();   //0; // TODO update needed
+//
+//    // calculate Iabc->DQ->PI->DQ->Vabc
+//    control_DQ(phase_current_result,
+//               &CCd, &CCq, angle, angular_speed,
+//               BAT_DEFAULT_VOLTAGE,
+//               duty);
+//
+//
+//    epwm1_set_duty(duty[phaseU], 1-duty[phaseU]);
+//    epwm2_set_duty(duty[phaseV], 1-duty[phaseV]);
+//    epwm3_set_duty(duty[phaseW], 1-duty[phaseW]);
+//}
+/*************TEST CODE******************/
+void test_angle_update(float32 unit_angle){
+    testangle += unit_angle;
+    if(testangle >= 2*PI){
+        testangle = 0;
+    }else if(testangle <= -2*PI){
+        testangle = 0;
+    }
+}
+void test_Idq_update(float32 Id_ref, float32 Iq_ref){
+    CCd.I_ref = Id_ref;
+    CCq.I_ref = Iq_ref;
+}
+void test_I_update(float32 current){CCtest.I_ref = current;}
+void test_poll_voltage(float32 duty){
+    // 폴 전압이 원하는 듀티로 잘 변경되고 있음을 확인함.
+    epwm1_set_duty(testduty0, 1-testduty0);
+    epwm2_set_duty(testduty1, 1-testduty1);
+    epwm3_set_duty(testduty2, 1-testduty2);
+}
 
-void control_DQ(float32* phase_current,
-                Current_Controller* ccId, Current_Controller* ccIq,
-                float32 angle, float32 angular_speed,
-                float32 max_v_pole,
-                float32* duty_out){
-    // angle: rad
-    // angle_speed : rad/sec
-    float32 Ia_fb = phase_current[phaseU];
-    float32 Ib_fb = phase_current[phaseV];
-    float32 Ic_fb = phase_current[phaseW];
-    float32 Id_fb, Iq_fb;
-    float32 I_err = 0.0;
+//void test_V_DQ(float32 vdr, float32 vqr, float32 angle_rad, float32 vdc){
+//    // 3상 DQ 변환이 잘 제어되고 있음을 확인함
+//
+//    float32 va, vb, vc, vsn;
+//
+//    dq2abc(vdr,vqr,angle_rad, &va, &vb, &vc);
+//    vsn = SVPWM_offset_voltage(va,vb,vc);
+//    va += (vsn+24);
+//    vb += (vsn+24);
+//    vc += (vsn+24);
+//
+//    va = (va > vdc) ? vdc : ((va < 0)? 0: va);
+//    vb = (vb > vdc) ? vdc : ((vb < 0)? 0: vb);
+//    vc = (vc > vdc) ? vdc : ((vc < 0)? 0: vc);
+//
+//    duty_out[phaseU] = va/vdc;
+//    duty_out[phaseV] = vb/vdc;
+//    duty_out[phaseW] = vc/vdc;
+//
+//    epwm1_set_duty(duty_out[phaseU], 1-duty_out[phaseU]);
+//    epwm2_set_duty(duty_out[phaseV], 1-duty_out[phaseV]);
+//    epwm3_set_duty(duty_out[phaseW], 1-duty_out[phaseW]);
+//}
 
-    Id_fb = 0.0;
-    Iq_fb = 0.0;
-    float32 va,vb,vc, vsn, vdc, voffset_pole;
+void test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, Current_Controller* ccId, Current_Controller* ccIq){
+    float32 duty_out[3]={0,0,0};
+    float32 Id_err = 0.0;
+    float32 Iq_err = 0.0;
+    float32 Id_fb = 0.0;
+    float32 Iq_fb = 0.0;
+    float32 Ia_fb = phase_current_result[phaseU];
+    float32 Ib_fb = phase_current_result[phaseV];
+    float32 Ic_fb = phase_current_result[phaseW];
 
-    abc2dq(Ia_fb, Ib_fb, Ic_fb, angle, &Id_fb, &Iq_fb);
+    float32 va,vb,vc,vsn;
+    angle_E_rad=0;
+    abc2dq(Ia_fb, Ib_fb, Ic_fb, angle_E_rad, &Id_fb, &Iq_fb);
 
-    // control D
-    I_err = ccId->I_ref - Id_fb;
-    ccId->V_anti = ccId->V_ref - ccId->V_sat;
-    ccId->V_int += ccId->ki*(I_err - ccId->ka*ccId->V_anti);
-    ccId->V_fb = ccId->V_int + ccId->kp*I_err;
+    Id_err = ccId->I_ref - Id_fb;
+    ccId->V_int += (ccId->ki*Id_err)/10000.0; // 10kHz time duration = 1/0000 secs
+    ccId->V_fb = ccId->V_int + ccId->kp*Id_err;
 
-    // control Q
-    I_err = ccIq->I_ref - Iq_fb;
-    ccIq->V_anti = ccIq->V_ref - ccIq->V_sat;
-    ccIq->V_int += ccIq->ki*(I_err - ccIq->ka*ccIq->V_anti);
-    ccIq->V_fb = ccIq->V_int + ccIq->kp*I_err;
+    Iq_err = ccIq->I_ref - Iq_fb;
+    ccIq->V_int += (ccIq->ki*Iq_err)/10000.0;
+    ccIq->V_fb = ccIq->V_int + ccIq->kp*Iq_err;
 
-    ccId->V_ref = ccId->V_fb + (-Ls_DEFAULT*angular_speed*Iq_fb); // add Vd feeadforward
-    ccIq->V_ref = ccIq->V_fb + (angular_speed*Ls_DEFAULT*Id_fb + angular_speed*flux_DEFAULT); // Vq feedforward
+    ccId->V_ref = ccId->V_fb; //+ (-Ls_DEFAULT*angular_E_speed*Iq_fb);
+    ccIq->V_ref = ccIq->V_fb; //+ (Ls_DEFAULT*angular_E_speed*Id_fb + angular_E_speed*flux_DEFAULT);
 
+    dq2abc(ccId->V_ref, ccIq->V_ref, angle_E_rad, &va, &vb, &vc);
 
-
-    dq2abc(ccId->V_ref, ccIq->V_ref, angle, &va, &vb, &vc);
-    vsn = SVPWM_offset_voltage(va,vb,vc);
-
-    vdc = max_v_pole;
-    voffset_pole = vdc/2;
-
-    vsn += voffset_pole;
-
+    vsn = SVPWM_offset_voltage(va,vb,vc) + vdc/2;
     va += vsn;
     vb += vsn;
     vc += vsn;
@@ -128,50 +231,47 @@ void control_DQ(float32* phase_current,
     duty_out[phaseV] = vb/vdc;
     duty_out[phaseW] = vc/vdc;
 
-}
-void control_sinusoidal_BEMF(){
-    float32 duty[3]={0,0,0};
-    float32 angle = hall_sensor_get_E_angle_rad();
-    float32 angular_speed = hall_sensor_get_E_angular_speed();   //0; // TODO update needed
-
-    // calculate Iabc->DQ->PI->DQ->Vabc
-    control_DQ(phase_current_result,
-               &CCd, &CCq, angle, angular_speed,
-               BAT_DEFAULT_VOLTAGE,
-               duty);
-
-
-    epwm1_set_duty(duty[phaseU], 1-duty[phaseU]);
-    epwm2_set_duty(duty[phaseV], 1-duty[phaseV]);
-    epwm3_set_duty(duty[phaseW], 1-duty[phaseW]);
+    epwm1_set_duty(duty_out[phaseU], 1-duty_out[phaseU]);
+    epwm2_set_duty(duty_out[phaseV], 1-duty_out[phaseV]);
+    epwm3_set_duty(duty_out[phaseW], 1-duty_out[phaseW]);
 }
 
+void test_I_DQ(float32 vdc, float32 angle_rad, Current_Controller* ccId, Current_Controller* ccIq){
+    float32 duty_out[3]={0,0,0};
+    float32 Id_err = 0.0;
+    float32 Iq_err = 0.0;
+    float32 Id_fb = 0.0;
+    float32 Iq_fb = 0.0;
+    float32 Ia_fb = phase_current_result[phaseU];
+    float32 Ib_fb = phase_current_result[phaseV];
+    float32 Ic_fb = phase_current_result[phaseW];
 
-/*************TEST CODE******************/
-void test_angle_update(float32 unit_angle){
-    testangle += unit_angle;
-    if(testangle >= 2*PI){
-        testangle = 0;
-    }
-}
-void test_I_update(float32 current){
-    CCtest.I_ref = current;
-}
-void test_poll_voltage(float32 duty){
-    epwm1_set_duty(duty, 1-duty);
-    epwm2_set_duty(duty, 1-duty);
-    epwm3_set_duty(duty, 1-duty);
-}
+    float32 va,vb,vc,vsn;
 
-float32 duty_out[3];
-void test_V_DQ(float32 vdr, float32 vqr, float32 angle_rad, float32 vdc){
-    float32 va, vb, vc, vsn;
+    abc2dq(Ia_fb, Ib_fb, Ic_fb, angle_rad, &Id_fb, &Iq_fb);
 
-    dq2abc(vdr,vqr,angle_rad, &va, &vb, &vc);
-    vsn = SVPWM_offset_voltage(va,vb,vc);
-    va += (vsn+24);
-    vb += (vsn+24);
-    vc += (vsn+24);
+    Id_err = ccId->I_ref - Id_fb;
+    ccId->V_int += (ccId->ki*Id_err)/10000.0; // 10kHz time duration = 1/0000 secs
+    ccId->V_fb = ccId->V_int + ccId->kp*Id_err;
+
+    Iq_err = ccIq->I_ref - Iq_fb;
+    ccIq->V_int += (ccIq->ki*Iq_err)/10000.0;
+    ccIq->V_fb = ccIq->V_int + ccIq->kp*Iq_err;
+
+    // for the motor
+    // feedforward term is needed
+    /*
+     *  ccId->V_ref = ccId->V_fb + (-Ls_DEFAULT*angular_speed*Iq_fb); // add Vd feeadforward
+     *  ccIq->V_ref = ccIq->V_fb + (angular_speed*Ls_DEFAULT*Id_fb + angular_speed*flux_DEFAULT); // Vq feedforward
+     *
+     */
+
+    dq2abc(ccId->V_fb, ccIq->V_fb, angle_rad, &va, &vb, &vc);
+
+    vsn = SVPWM_offset_voltage(va,vb,vc) + vdc/2;
+    va += vsn;
+    vb += vsn;
+    vc += vsn;
 
     va = (va > vdc) ? vdc : ((va < 0)? 0: va);
     vb = (vb > vdc) ? vdc : ((vb < 0)? 0: vb);
@@ -186,37 +286,32 @@ void test_V_DQ(float32 vdr, float32 vqr, float32 angle_rad, float32 vdc){
     epwm3_set_duty(duty_out[phaseW], 1-duty_out[phaseW]);
 }
 
+//void is_aligned(float32 vdc, Current_Controller* ccId, Current_Controller* ccIq){
+//    float32 aligned_time = 5; //seconds
+//    float32 aligned_counter_max = aligned_time*CONTROL_FREQ;
+//    static float32 aligned_counter = 0;
+//
+//    if(aligned_counter < aligned_counter_max){
+//        ccId->I_ref = testAlignId;
+//        ccIq->I_ref = 0.0;
+//        test_I_DQ(vdc, 0, ccId, ccIq);
+//        aligned_counter++;
+//        return false;
+//    }else if(aligned_counter == aligned_counter_max){
+//        float32 angle_E_rad_offset = hall_sensor_get_E_angle_rad();
+//        hall_sensor_set_angle_offset_rad(angle_E_rad_offset);
+//        return false;
+//    }else{
+//        return true;
+//    }
+//}
 
-void test_Id_DQ(float32 vdc,  float32 Id_fb, float32 angle_rad, Current_Controller* ccId){
-    float32 I_err = 0.0;
-    float32 vdr, va, vb, vc, vsn;
-    float32 duty_out[3];
 
-    I_err = ccId->I_ref - Id_fb;
-    ccId->V_int += (ccId->ki*I_err)/10000.0; // 10kHz time duration = 1/0000 secs
+void test_control_1phase(float32 vdc, Current_Controller* cc){
+    // 이 함수는 테스트를 모두 통과한 함수입니다.
+    // 단상 전류 제어가 1A에서 오프셋 차이 없이 잘 되었음을 확인함.
 
-    vdr = ccId->V_fb;
-
-    dq2abc(vdr,0,angle_rad, &va, &vb, &vc);
-    vsn = SVPWM_offset_voltage(va,vb,vc);
-    va += (vsn+24);
-    vb += (vsn+24);
-    vc += (vsn+24);
-
-    va = (va > vdc) ? vdc : ((va < 0)? 0: va);
-    vb = (vb > vdc) ? vdc : ((vb < 0)? 0: vb);
-    vc = (vc > vdc) ? vdc : ((vc < 0)? 0: vc);
-
-    duty_out[phaseU] = va/vdc;
-    duty_out[phaseV] = vb/vdc;
-    duty_out[phaseW] = vc/vdc;
-
-    epwm1_set_duty(duty_out[phaseU], 1-duty_out[phaseU]);
-    epwm2_set_duty(duty_out[phaseV], 1-duty_out[phaseV]);
-    epwm3_set_duty(duty_out[phaseW], 1-duty_out[phaseW]);
-}
-
-void test_control_1phase(float32 vdc, float32 I_fb, Current_Controller* cc){
+    float32 I_fb =  phase_current_result[phaseU];
     float32 I_err = 0.0;
     float32 va;
     float32 duty = 0.0;
@@ -232,9 +327,9 @@ void test_control_1phase(float32 vdc, float32 I_fb, Current_Controller* cc){
     va = (va > vdc) ? vdc : ((va < 0)? 0: va);
     duty = va/vdc;
 
-    epwm1_set_duty(duty, 1-duty);
-    //epwm2_set_duty(duty, 1-duty);
-    //epwm3_set_duty(duty, 1-duty);
+    epwm1_set_duty(duty, 1-duty); // U상
+    //epwm2_set_duty(duty, 1-duty); // V상
+    //epwm3_set_duty(duty, 1-duty); // W상
 }
 
 /******************************************/
@@ -319,12 +414,16 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
     }
 
     if(adc_result_flag == ADC_ALL_SAMPLED ){
+
         hall_sensor_update();
         controlCycleCount++;
         /* 제어 코드는 여기서 호출되어야 한다 */
+        //test_angle_update(2*PI*CONTROL_PRD*freq);
+        //test_I_DQ(20, testangle, &CCd, &CCq);
 
-        test_control_1phase(CCtest.V_sat, phase_current_result[phaseU], &CCtest);
-        //test_poll_voltage(testduty);
+
+        //test_control_1phase(CCtest.V_sat, &CCtest);
+        test_poll_voltage(0);
        // test_V_DQ(testvd,testvq, testangle,48);
 
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
@@ -345,9 +444,9 @@ void Ready_controller(){
     // 만일 그렇지 않으면 ADC, ECAP이 initialize 되는 동안
     // start_controller에 의해 ePWM이 시작되고 ePWM cycle (2~3개)가 그냥 지나가버린다
     // ePWM -> ADC 호출 -> 제어함수 호출 구조이기 때문에, ADC를 ePWM보다 먼저 설정을 완료해야한다.
-    Init_CC(&CCd, 40); // Vd_sat 40
-    Init_CC(&CCq, 40); // Vq_sat 40
-    Init_CC(&CCtest, 20);
+    Init_CC(&CCd, 20); // Vd_sat 40
+    Init_CC(&CCq, 20); // Vq_sat 40
+//    Init_CC(&CCtest, 20);
 
     Init_3current_ADC( &control_state_update );
     Init_misc_ADC();

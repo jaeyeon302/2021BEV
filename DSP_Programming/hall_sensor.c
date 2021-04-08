@@ -182,6 +182,7 @@ Hall_state hall_sensor_update(){
         hall_state.Wr = 0;
     }
     state.rotation = 0;
+    state.angle_E_offset_rad = 0;
 
     hall_state.hu = state.hu;
     hall_state.hv = state.hv;
@@ -200,12 +201,16 @@ Hall_state hall_sensor_update(){
     return state;
 }
 
+void hall_sensor_set_angle_offset_rad(float64 offset_rad){
+    hall_state.angle_E_offset_rad = offset_rad;
+}
+
 float64 hall_sensor_get_E_angle_rad(){
     float64 time2 = ECap1Regs.TSCTR;
     byte hu = hall_state.hu;
     byte hv = hall_state.hv;
     byte hw = hall_state.hw;
-    float64 Wr = hall_state.Wr;
+    float64 Wr = 0;//hall_state.Wr;
 
     float64 angle;
     if (hu==1 & hv==0 & hw==1){
@@ -262,7 +267,7 @@ float64 hall_sensor_get_E_angle_rad(){
             angle = PI*5/3;
         }
     }
-    return angle;
+    return (angle-hall_state.angle_E_offset_rad);
 }
 
 float64 hall_sensor_get_M_angle_rad(){

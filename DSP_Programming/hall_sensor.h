@@ -16,6 +16,7 @@ typedef struct {
     byte hv:1;
     byte hw:1;
     byte rsvd:5;
+    float32 angle_E_offset_rad;
     float32 angle_E_rad;
     float64 Wr;
     int32 rotation;
@@ -26,6 +27,7 @@ void Init_hall_sensor();
 void Start_hall_sensor();
 
 Hall_state hall_sensor_update();
+void hall_sensor_set_angle_offset_rad(float64 offset_rad);
 float64 hall_sensor_get_E_angle_rad();
 float64 hall_sensor_get_M_angle_rad();
 float64 hall_sensor_get_E_angular_speed(); // rad/sec

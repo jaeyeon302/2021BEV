@@ -29,8 +29,8 @@ void epwm_set_duty(volatile struct EPWM_REGS* epwm,
     Uint16 cmpb = 0;
     if(a_duty_ratio <= 0.0){
         cmpa = TB_PRD+1; // turn off
-    }else if(a_duty_ratio >= 1.0){
-        cmpa = 0; // turn on
+    }else if(a_duty_ratio >=1.0){
+        cmpa = 0;
     }else if(a_duty_ratio>0.0 && a_duty_ratio<1.0){
         cmpa = (Uint16)(TB_PRD - a_duty_ratio*TB_PRD); // bye bye Decimal places
     }
@@ -113,7 +113,7 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     // HSPCLKDIV -> 1 : hspclkdiv = 2
     // wiht upper config, TBCLK = 50MHz
     epwm->TBCTL.bit.CLKDIV = 0;
-    epwm->TBCTL.bit.HSPCLKDIV = 1;
+    epwm->TBCTL.bit.HSPCLKDIV = 0x1;
     /* END of configuration of TBCLK frequency */
 
 
@@ -126,15 +126,16 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     // because of this up&down counter mode, the twice of TBPRD should be matched
     // there fore TBPRD = 2500
     epwm->TBCTL.bit.CTRMODE = 2; // counter up and down for the symmetric pwm
-    epwm->TBCTL.bit.PRDLD = 0; // enable shadow register of TB module
+    epwm->TBCTL.bit.PRDLD = 0x0; // enable shadow register of TB module
+    epwm->TBCTL.bit.PHSDIR = 0x1;
     epwm->TBPHS.bit.TBPHS = 0x0000; // phase is 0
     epwm->TBPRD = 2500; // 10kHz
     TB_PRD = epwm->TBPRD;
 
     // Setup TBCTL SYNC
     epwm->TBCTL.bit.SWFSYNC = 0;
-    epwm->TBCTL.bit.SYNCOSEL = 0; // transfer SYNCIN to SYNCOUT directly
-    epwm->TBCTL.bit.PHSEN = 1; // ENABLE SYNC FROM OUTSIDE
+//    epwm->TBCTL.bit.SYNCOSEL = 0; // transfer SYNCIN to SYNCOUT directly
+//    epwm->TBCTL.bit.PHSEN = 1; // ENABLE SYNC FROM OUTSIDE
 
     // Setup shadowing
     // enable shadow mode for CMPA and CMPB
@@ -227,7 +228,7 @@ void Init_3phase_ePWM(){
     CpuSysRegs.PCLKCR2.bit.EPWM3 = 1;
     // TB Clocks of all ePWM modules are stopped
     CpuSysRegs.PCLKCR0.bit.TBCLKSYNC = 0;
-    EDIS;
+
 
     // Configure ePWM SYNC
     // it is the same pin with the pin of hall_sensor.c
@@ -243,6 +244,16 @@ void Init_3phase_ePWM(){
     configure_ePWM(&EPwm1Regs);
     configure_ePWM(&EPwm2Regs);
     configure_ePWM(&EPwm3Regs);
+
+    EPwm1Regs.TBCTL.bit.PHSEN = 0x00;
+    EPwm2Regs.TBCTL.bit.PHSEN = 0x01;
+    EPwm3Regs.TBCTL.bit.PHSEN = 0x01;
+
+    EPwm1Regs.TBCTL.bit.SYNCOSEL = 0x01;
+    EPwm2Regs.TBCTL.bit.SYNCOSEL = 0x00;
+    EPwm3Regs.TBCTL.bit.SYNCOSEL = 0x00;
+
+    EDIS;
 }
 void Start_3phase_ePWM(){
     EALLOW;
