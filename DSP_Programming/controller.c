@@ -421,9 +421,11 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         //test_angle_update(2*PI*CONTROL_PRD*freq);
         //test_I_DQ(20, testangle, &CCd, &CCq);
 
-
+        //test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, Current_Controller* ccId, Current_Controller* ccIq){
+        float32 angle_E_rad = hall_sensor_get_E_angle_rad();
+        test_vect_I_DQ(20, angle_E_rad, 0, &CCd, &CCq);
         //test_control_1phase(CCtest.V_sat, &CCtest);
-        test_poll_voltage(0);
+        //test_poll_voltage(0);
        // test_V_DQ(testvd,testvq, testangle,48);
 
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
