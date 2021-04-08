@@ -30,6 +30,7 @@ float32 testduty2 = 0.5;
 float32 testangle = 0;
 float32 testAlignId = 2;
 float32 freq = 1;
+float32 angle_E_rad=0;
 /**********************************/
 // Functions for DQ PI control with SVPWM
 void Init_CC(Current_Controller* cc, float32 v_sat ){
@@ -202,7 +203,6 @@ void test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, C
     float32 Ic_fb = phase_current_result[phaseW];
 
     float32 va,vb,vc,vsn;
-    angle_E_rad=0;
     abc2dq(Ia_fb, Ib_fb, Ic_fb, angle_E_rad, &Id_fb, &Iq_fb);
 
     Id_err = ccId->I_ref - Id_fb;
@@ -422,7 +422,7 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         //test_I_DQ(20, testangle, &CCd, &CCq);
 
         //test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, Current_Controller* ccId, Current_Controller* ccIq){
-        float32 angle_E_rad = hall_sensor_get_E_angle_rad();
+        angle_E_rad = hall_sensor_get_E_angle_rad();
         test_vect_I_DQ(20, angle_E_rad, 0, &CCd, &CCq);
         //test_control_1phase(CCtest.V_sat, &CCtest);
         //test_poll_voltage(0);
