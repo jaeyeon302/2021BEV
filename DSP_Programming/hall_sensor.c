@@ -16,8 +16,8 @@ interrupt void ecap1_isr_Wr_update(void){
     ECap1Regs.ECCLR.bit.CEVT1 = 1; //CEVT1 flag clear
     PieCtrlRegs.PIEACK.all |= PIEACK_GROUP4;
     Uint32 T = ECap1Regs.CAP1;
-    hall_state.Wr=2*PI*1000000000/5/T; //2PI/(5ns*#ofTSCount), tsclk=sysclk=200MHz !!!!!!!!!!!!!!!!!!!
-
+//    hall_state.Wr=2*PI*1000000000/5/T; //2PI/(5ns*#ofTSCount), tsclk=sysclk=200MHz !!!!!!!!!!!!!!!!!!!
+    hall_state.Wr=2*PI/((float)T/200e6);
     time1 = ECap1Regs.TSCTR;
 }
 
@@ -182,7 +182,7 @@ Hall_state hall_sensor_update(){
         hall_state.Wr = 0;
     }
     state.rotation = 0;
-    state.angle_E_offset_rad = 0;
+    state.angle_E_offset_rad = 5*PI/6.0;
 
     hall_state.hu = state.hu;
     hall_state.hv = state.hv;
@@ -210,61 +210,61 @@ float64 hall_sensor_get_E_angle_rad(){
     byte hu = hall_state.hu;
     byte hv = hall_state.hv;
     byte hw = hall_state.hw;
-    float64 Wr = 0;//hall_state.Wr;
+    float64 Wr = hall_state.Wr;
 
     float64 angle;
     if (hu==1 & hv==0 & hw==1){
-        angle = hall_state.angle_E_rad + (time2)*(5/1000000000)*Wr;
-        if (angle > PI/3){
-            angle = PI/3;
+        angle = hall_state.angle_E_rad + (time2)*((float32)1/200e6)*Wr;
+        if (angle > PI/3.0){
+            angle = PI/3.0;
         }
         if (angle < 0){
             angle = 0;
         }
     }
     else if (hu==1 & hv==0 & hw==0){
-        angle = hall_state.angle_E_rad + (time2-time1/6)*(5/1000000000)*Wr;
-        if (angle > PI*2/3){
-            angle = PI*2/3;
+        angle = hall_state.angle_E_rad + (time2-time1/6.0)*((float32)1/200e6)*Wr;
+        if (angle > PI*2.0/3.0){
+            angle = PI*2.0/3.0;
         }
-        if (angle < PI/3){
-            angle = PI/3;
+        if (angle < PI/3.0){
+            angle = PI/3.0;
         }
     }
     else if (hu==1 & hv==1 & hw==0){
-        angle = hall_state.angle_E_rad + (time2-time1*2/6)*(5/1000000000)*Wr;
+        angle = hall_state.angle_E_rad + (time2-time1*2.0/6.0)*((float32)1/200e6)*Wr;
         if (angle > PI){
             angle = PI;
         }
-        if (angle < PI*2/3){
-            angle = PI*2/3;
+        if (angle < PI*2.0/3.0){
+            angle = PI*2.0/3.0;
         }
     }
     else if (hu==0 & hv==1 & hw==0){
-        angle = hall_state.angle_E_rad + (time2-time1*3/6)*(5/1000000000)*Wr;
-        if (angle > PI*4/3){
-            angle = PI*4/3;
+        angle = hall_state.angle_E_rad + (time2-time1*3.0/6.0)*((float32)1/200e6)*Wr;
+        if (angle > PI*4.0/3.0){
+            angle = PI*4.0/3.0;
         }
         if (angle < PI){
             angle = PI;
         }
     }
     else if (hu==0 & hv==1 & hw==1){
-        angle = hall_state.angle_E_rad + (time2-time1*4/6)*(5/1000000000)*Wr;
-        if (angle > PI*5/3){
-            angle = PI*5/3;
+        angle = hall_state.angle_E_rad + (time2-time1*4.0/6.0)*((float32)1/200e6)*Wr;
+        if (angle > PI*5.0/3.0){
+            angle = PI*5.0/3.0;
         }
-        if (angle < PI*4/3){
-            angle = PI*4/3;
+        if (angle < PI*4.0/3.0){
+            angle = PI*4.0/3.0;
         }
     }
     else if (hu==0 & hv==0 & hw==1){
-        angle = hall_state.angle_E_rad + (time2-time1*5/6)*(5/1000000000)*Wr;
+        angle = hall_state.angle_E_rad + (time2-time1*5.0/6.0)*((float32)1/200e6)*Wr;
         if (angle > TWOPI){
             angle = TWOPI;
         }
-        if (angle < PI*5/3){
-            angle = PI*5/3;
+        if (angle < PI*5.0/3.0){
+            angle = PI*5.0/3.0;
         }
     }
     return (angle-hall_state.angle_E_offset_rad);
