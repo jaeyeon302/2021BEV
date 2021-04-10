@@ -23,9 +23,9 @@ typedef struct {
 }Hall_state;
 
 
-void Init_hall_sensor();
+void Init_hall_sensor(float32 update_period);
 void Start_hall_sensor();
-
+Hall_state get_hall_state();
 Hall_state hall_sensor_update();
 void hall_sensor_set_angle_offset_rad(float64 offset_rad);
 float64 hall_sensor_get_E_angle_rad();

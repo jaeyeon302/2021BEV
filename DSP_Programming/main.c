@@ -9,13 +9,25 @@
  */
 #include "controller.h"
 #define TIMER0_DURATION 1000 // milliseconds
-
+#define NUM_OF_RECORDS 200
 float32 testcurrentD=0;
 float32 testcurrentQ=0;
-
+float32 angles[NUM_OF_RECORDS];
+float32 phase_currents[NUM_OF_RECORDS];
+float32 d_currents[NUM_OF_RECORDS];
+Uint32 i = 0;
+Uint32 record = 0;
 interrupt void timer0_debugging_isr(){
     CpuTimer0.InterruptCount++;
     test_Idq_update(testcurrentD,testcurrentQ);
+   if(record){
+       if(i < NUM_OF_RECORDS){
+           angles[i] = hall_sensor_get_E_angle_rad();//get_hall_state().angle_E_rad;
+           phase_currents[i] = get_3phase_currents()[phaseU];
+           d_currents[i] = get_dqr_currents()[0]; // 0: d-axis, 1: q-axis
+           i++;
+       }
+   }
     GpioDataRegs.GPATOGGLE.bit.GPIO31 = 1; //flip the led state0
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; // clear PIEACK.1 == PIEACK switch closed
 }
@@ -50,7 +62,7 @@ int main(void){
     CpuSysRegs.PCLKCR0.bit.CPUTIMER0 = 1;
     CpuSysRegs.PCLKCR0.bit.CPUTIMER1 = 1;
     InitCpuTimers(); // initialize global variable CpuTimer0, CpuTimer1, CpuTimer2
-    ConfigCpuTimer(&CpuTimer0,200, 100000); // timer, 200MHz(PLL CLK),
+    ConfigCpuTimer(&CpuTimer0,200, 10000); // timer, 200MHz(PLL CLK),
     IER |= (M_INT13 | M_INT1); // M_INT13 = CPU TIMER1 interrupt, M_INT1 = PIE1 (to enable timer0 interrupt)
 
     PieCtrlRegs.PIECTRL.bit.ENPIE = 1; // set total PIE Enable Register

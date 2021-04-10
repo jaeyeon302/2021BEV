@@ -21,14 +21,14 @@
 
 /* motor coefficients */
 #define Ls_DEFAULT ((float32)0.1/1000) //[H]
-#define Rs_DEFAULT ((float32)0.5) // [Ohm]
+#define Rs_DEFAULT ((float32)0.1) // [Ohm]
 #define flux_DEFAULT 0.0021
 
 /* control coefficients */
 // ±è»óÈÆ Àú ) ¸ðÅÍÁ¦¾î 119, 145 page
-#define Wc 50
-#define Kp_DEFAULT 0.05//Ls_DEFAULT*Wc
-#define Ki_DEFAULT 50//Rs_DEFAULT*Wc = 50
+#define Wc 625
+#define Kp_DEFAULT 62.5/1000//Ls_DEFAULT*Wc
+#define Ki_DEFAULT 62.5//Rs_DEFAULT*Wc = 50
 #define Ka_DEFAULT 1/Kp_DEFAULT
 #define CURRENT_LIMIT_SCALE 0.33 // FOR SAFETY
 
@@ -52,6 +52,9 @@
 
 void Ready_controller();
 void Start_controller();
+
+float32* get_3phase_currents();
+float32* get_dqr_currents();
 
 void test_angle_update(float32 unit_angle);
 void test_Idq_update(float32 Id_ref, float32 Iq_ref);

@@ -130,6 +130,7 @@ void configure_ePWM(volatile struct EPWM_REGS* epwm){
     epwm->TBCTL.bit.PHSDIR = 0x1;
     epwm->TBPHS.bit.TBPHS = 0x0000; // phase is 0
     epwm->TBPRD = 2500; // 10kHz
+    epwm->TBCTR = 0; // 10kHz
     TB_PRD = epwm->TBPRD;
 
     // Setup TBCTL SYNC
@@ -224,10 +225,10 @@ void Init_3phase_ePWM(){
 
     // turn on the clock for epwm modules
     CpuSysRegs.PCLKCR2.bit.EPWM1 = 1;
-    CpuSysRegs.PCLKCR2.bit.EPWM2 = 1;
-    CpuSysRegs.PCLKCR2.bit.EPWM3 = 1;
+//    CpuSysRegs.PCLKCR2.bit.EPWM2 = 1;
+//    CpuSysRegs.PCLKCR2.bit.EPWM3 = 1;
     // TB Clocks of all ePWM modules are stopped
-    CpuSysRegs.PCLKCR0.bit.TBCLKSYNC = 0;
+    CpuSysRegs.PCLKCR0.bit.TBCLKSYNC = 1;
 
 
     // Configure ePWM SYNC
@@ -257,13 +258,14 @@ void Init_3phase_ePWM(){
 }
 void Start_3phase_ePWM(){
     EALLOW;
-    CpuSysRegs.PCLKCR0.bit.TBCLKSYNC=1; //all TBCLK start counting
-    EDIS;
+//    CpuSysRegs.PCLKCR0.bit.TBCLKSYNC=1; //all TBCLK start counting
 
-    EPwm1Regs.TBCTL.bit.SWFSYNC = 1;
+
+//    EPwm1Regs.TBCTL.bit.SWFSYNC = 1;
 
     // disable sync in future
-    EPwm1Regs.TBCTL.bit.PHSEN = 0;
-    EPwm2Regs.TBCTL.bit.PHSEN = 0;
-    EPwm3Regs.TBCTL.bit.PHSEN = 0;
+//    EPwm1Regs.TBCTL.bit.PHSEN = 0;
+//    EPwm2Regs.TBCTL.bit.PHSEN = 0;
+//    EPwm3Regs.TBCTL.bit.PHSEN = 0;
+    EDIS;
 }

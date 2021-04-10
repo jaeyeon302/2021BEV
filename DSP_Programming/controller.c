@@ -17,13 +17,13 @@ const unsigned char ADC_ALL_SAMPLED = (FLAG_ADC_CURRENT_PHASE_U_SAMPLED
 
 float32 offset_voltage[4] = {0, 0, 0, 0};
 float32 phase_current_result[3]={0, 0, 0}; //[Ampere]
+float32 dq_current_result[2] = {0,0};
 float32 throttle_result = 0; //[Ampere]
 float32 battery_level_result = 0; // 0 - 48[V]
 
 Current_Controller CCd,CCq,CCtest;
 
-float32 testvd = 0.0;
-float32 testvq = 0.0;
+
 float32 testduty0 = 0.5;
 float32 testduty1 = 0.5;
 float32 testduty2 = 0.5;
@@ -31,6 +31,17 @@ float32 testangle = 0;
 float32 testAlignId = 2;
 float32 freq = 1;
 float32 angle_E_rad=0;
+
+
+Uint32 t_count = 0;
+
+float32* get_3phase_currents(){
+    return phase_current_result;
+}
+float32* get_dqr_currents(){
+    return dq_current_result;
+}
+
 /**********************************/
 // Functions for DQ PI control with SVPWM
 void Init_CC(Current_Controller* cc, float32 v_sat ){
@@ -200,10 +211,13 @@ void test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, C
     float32 Iq_fb = 0.0;
     float32 Ia_fb = phase_current_result[phaseU];
     float32 Ib_fb = phase_current_result[phaseV];
-    float32 Ic_fb = phase_current_result[phaseW];
+    float32 Ic_fb = -(Ia_fb + Ib_fb);//phase_current_result[phaseW];
 
     float32 va,vb,vc,vsn;
     abc2dq(Ia_fb, Ib_fb, Ic_fb, angle_E_rad, &Id_fb, &Iq_fb);
+
+    dq_current_result[0] = Id_fb;
+    dq_current_result[1] = Iq_fb;
 
     Id_err = ccId->I_ref - Id_fb;
     ccId->V_int += (ccId->ki*Id_err)/10000.0; // 10kHz time duration = 1/0000 secs
@@ -218,7 +232,8 @@ void test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, C
 
     dq2abc(ccId->V_ref, ccIq->V_ref, angle_E_rad, &va, &vb, &vc);
 
-    vsn = SVPWM_offset_voltage(va,vb,vc) + vdc/2;
+    //vsn = SVPWM_offset_voltage(va,vb,vc) + vdc/2;
+    vsn = vdc/2.0;
     va += vsn;
     vb += vsn;
     vc += vsn;
@@ -422,7 +437,8 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         //test_I_DQ(20, testangle, &CCd, &CCq);
 
         //test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, Current_Controller* ccId, Current_Controller* ccIq){
-        angle_E_rad = hall_sensor_get_E_angle_rad();
+        //angle_E_rad = hall_sensor_get_E_angle_rad();
+        angle_E_rad = hall_sensor_get_E_angle_rad();//get_hall_state().angle_E_rad - get_hall_state().angle_E_offset_rad;
         test_vect_I_DQ(20, angle_E_rad, 0, &CCd, &CCq);
         //test_control_1phase(CCtest.V_sat, &CCtest);
         //test_poll_voltage(0);
@@ -453,13 +469,11 @@ void Ready_controller(){
     Init_3current_ADC( &control_state_update );
     Init_misc_ADC();
     Init_3phase_ePWM();
-    Init_hall_sensor();
-
-
+    Init_hall_sensor(CONTROL_PRD);
 }
 
 void Start_controller(){
-    Start_3phase_ePWM();
+//    Start_3phase_ePWM();
     Start_3current_ADC();
     Start_hall_sensor();
 }
