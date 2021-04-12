@@ -10,6 +10,7 @@
 #define POLE_PAIR 23
 Hall_state prev_state;
 Hall_state hall_state;
+Angle_observer angle_observer;
 
 float32 time1=0;
 Uint32 t_counter = 0;
@@ -19,7 +20,7 @@ Hall_state get_hall_state(){
     return hall_state;
 }
 
-void Init_hall_sensor(float32 control_period){
+void Init_hall_sensor(){
 
     EALLOW;
     // H_U
@@ -40,8 +41,6 @@ void Init_hall_sensor(float32 control_period){
     GpioCtrlRegs.GPDDIR.bit.GPIO105 = 0;
     GpioCtrlRegs.GPDQSEL1.bit.GPIO105 = 0X0;
     GpioCtrlRegs.GPDPUD.bit.GPIO105 = 0;
-
-    update_period = control_period;
 }
 void Start_hall_sensor(){
     hall_state = hall_sensor_update(); // Get initial state
@@ -52,129 +51,29 @@ void Start_hall_sensor(){
     EINT;
 }
 
-//Hall_state hall_sensor_update(){
-//    Hall_state state;
-//
-//
-//    state.hu = GpioDataRegs.GPBDAT.bit.GPIO60;
-//    state.hv = GpioDataRegs.GPADAT.bit.GPIO22;
-//    state.hw = GpioDataRegs.GPDDAT.bit.GPIO105;
-//
-//    if(state.hu & !state.hv & state.hw){
-//        // 1 0 1
-//        // 5*pi/3 - 6*pi/3
-//        state.angle_E_rad = 5*Deg_60_IN_RAD;
-//        if(!hall_state.hu & !hall_state.hv & hall_state.hw){
-//            // 0 0 1
-//            // forward
-//            hall_state.angle_E_rad += Deg_60_IN_RAD;
-//        }else if(hall_state.hu & !hall_state.hv & !hall_state.hw){
-//            // 1 0 0
-//            // backward
-//            hall_state.angle_E_rad -= Deg_60_IN_RAD;
-//        }
-//    }else if(state.hu & !state.hv & !state.hw){
-//        // 1 0 0
-//        // 0 - pi/3
-//        state.angle_E_rad = 0;
-//        if(hall_state.hu & !hall_state.hv & hall_state.hw){
-//            // 1 0 1
-//            // forward
-//            hall_state.angle_E_rad += Deg_60_IN_RAD;
-//        }else if(hall_state.hu & hall_state.hv & !hall_state.hw){
-//            // 1 1 0
-//            // backward
-//            hall_state.angle_E_rad -= Deg_60_IN_RAD;
-//        }
-//    }else if(state.hu & state.hv & !state.hw){
-//        // 1 1 0
-//        // pi/3 - 2*pi/3
-//        state.angle_E_rad = Deg_60_IN_RAD;
-//        if(hall_state.hu & !hall_state.hv & !hall_state.hw){
-//            // 1 0 0
-//            // forward
-//            hall_state.angle_E_rad += Deg_60_IN_RAD;
-//        }else if(!hall_state.hu & hall_state.hv & !hall_state.hw){
-//            // 0 1 0
-//            // backward
-//            hall_state.angle_E_rad -= Deg_60_IN_RAD;
-//        }
-//    }else if(!state.hu & state.hv & !state.hw){
-//        // 0 1 0
-//        // 2*pi/3 - 3*pi/3
-//        state.angle_E_rad = 2*Deg_60_IN_RAD;
-//        if(hall_state.hu & hall_state.hv & !hall_state.hw){
-//            // 1 1 0
-//            // forward
-//            hall_state.angle_E_rad += Deg_60_IN_RAD;
-//        }else if(!hall_state.hu & hall_state.hv & hall_state.hw){
-//            // 0 1 1
-//            // backward
-//            hall_state.angle_E_rad -= Deg_60_IN_RAD;
-//        }
-//    }else if(!state.hu & state.hv & state.hw){
-//        // 0 1 1
-//        // 3*pi/3 - 4*pi/3
-//        state.angle_E_rad = 3*Deg_60_IN_RAD;
-//        if(!hall_state.hu & state.hv & !hall_state.hw){
-//            // 0 1 0
-//            // forward
-//            hall_state.angle_E_rad += Deg_60_IN_RAD;
-//        }else if(!hall_state.hu & !hall_state.hv & hall_state.hw){
-//            // 0 0 1
-//            // backward
-//            hall_state.angle_E_rad -= Deg_60_IN_RAD;
-//        }
-//    }else if(!state.hu & !state.hv & state.hw){
-//        // 0 0 1
-//        // 4*pi/3 - 5*pi/3
-//        state.angle_E_rad = 4*Deg_60_IN_RAD;
-//        if(!hall_state.hu & hall_state.hv & hall_state.hw){
-//            // 0 1 1
-//            // forward
-//            hall_state.angle_E_rad += Deg_60_IN_RAD;
-//        }else if(hall_state.hu & !hall_state.hv & hall_state.hw){
-//            // 1 0 1
-//            // backward
-//            hall_state.angle_E_rad -= Deg_60_IN_RAD;
-//        }
-//    }
-//
-//    state.rotation = 0;
-//    state.angle_E_offset_rad = 5*PI/6.0;
-//
-//    hall_state.hu = state.hu;
-//    hall_state.hv = state.hv;
-//    hall_state.hw = state.hw;
-//
-//    // restrict electrical angle between 0 to 2PI
-//    if(hall_state.angle_E_rad >= TWOPI){
-//        hall_state.rotation += 1;
-//        hall_state.angle_E_rad -= TWOPI;
-//    }
-//    if(hall_state.angle_E_rad < 0){
-//        hall_state.rotation -= 1;
-//        hall_state.angle_E_rad += TWOPI;
-//    }
-//
-//
-//    if(state.hu != prev_state.hu ||
-//       state.hv != prev_state.hv ||
-//       state.hw != prev_state.hw){
-//       state.Wr =  PI/3.0/(t_counter*update_period);
-//       hall_state.Wr = state.Wr;
-//       prev_state = hall_state;
-//       t_counter = 0;
-//    }else if(t_counter >= 1.0/update_period){
-//        hall_state.Wr = 0;
-//        state.Wr = 0;
-//        t_counter = 0;
-//    }else{
-//        t_counter++;
-//    }
-//
-//    return state;
-//}
+Angle_observer get_angle_observer(){
+    return angle_observer;
+}
+
+void Init_angle_observer(){
+    angle_observer.Kp = ANGLE_OBSERVER_KP;
+    angle_observer.Ki = ANGLE_OBSERVER_KI;
+    angle_observer.Wr = 0.0;
+    angle_observer.angle = 0.0;
+}
+
+float32 angle_observer_update(float32 hall_sensor_angle){
+    float32 angle_err = hall_sensor_angle - angle_observer.angle;
+    angle_observer.Wr+= angle_observer.Ki*angle_err*update_period;
+    angle_observer.angle += (angle_observer.Wr + angle_observer.Kp*angle_err)*update_period;
+
+    return angle_observer.angle;
+}
+
+float32 calibrate_angle_offset(float32 angle){
+    return angle - hall_state.angle_E_offset_rad;
+}
+
 
 Hall_state hall_sensor_update(){ // Hwigon Kim
     Hall_state state;
@@ -183,12 +82,17 @@ Hall_state hall_sensor_update(){ // Hwigon Kim
     state.hu = GpioDataRegs.GPBDAT.bit.GPIO60;
     state.hv = GpioDataRegs.GPADAT.bit.GPIO22;
     state.hw = GpioDataRegs.GPDDAT.bit.GPIO105;
+    state.angle_E_offset_rad = PI/3;
+    hall_state.bounded = false;
 
     if(state.hu & !state.hv & state.hw){
         // 1 0 1
         // 5*pi/3 - 6*pi/3
         hall_state.angle_E_rad = 5*Deg_60_IN_RAD;
     }else if(state.hu & !state.hv & !state.hw){
+        // 1 0 0
+        // 0 - pi/3
+        hall_state.bounded = true;
         hall_state.angle_E_rad = 0;
     }else if(state.hu & state.hv & !state.hw){
         // 1 1 0
@@ -206,8 +110,11 @@ Hall_state hall_sensor_update(){ // Hwigon Kim
         // 0 0 1
         // 4*pi/3 - 5*pi/3
         hall_state.angle_E_rad = 4*Deg_60_IN_RAD;
+    }else{
+        hall_state.angle_E_rad = state.angle_E_offset_rad;
     }
-    state.angle_E_offset_rad = 0.8;
+
+
 
     if(state.hu != hall_state.hu ||
        state.hv != hall_state.hv ||
@@ -248,7 +155,7 @@ float64 hall_sensor_get_E_angle_rad(){
         angle = hall_state.angle_E_rad-PI/3.0;
     }
 
-    return (angle-hall_state.angle_E_offset_rad);
+    return (angle);
 }
 
 float64 hall_sensor_get_M_angle_rad(){

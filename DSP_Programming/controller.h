@@ -22,11 +22,11 @@
 /* motor coefficients */
 #define Ls_DEFAULT ((float32)0.1/1000) //[H]
 #define Rs_DEFAULT ((float32)0.1) // [Ohm]
-#define flux_DEFAULT 0.0021
+#define flux_DEFAULT 0.0227
 
 /* control coefficients */
 // ±è»óÈÆ Àú ) ¸ðÅÍÁ¦¾î 119, 145 page
-#define Wc 625
+#define Wc 625 // 2*PI*f
 #define Kp_DEFAULT 62.5/1000//Ls_DEFAULT*Wc
 #define Ki_DEFAULT 62.5//Rs_DEFAULT*Wc = 50
 #define Ka_DEFAULT 1/Kp_DEFAULT

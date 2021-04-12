@@ -31,6 +31,7 @@ float32 testangle = 0;
 float32 testAlignId = 2;
 float32 freq = 1;
 float32 angle_E_rad=0;
+float32 angular_E_speed=0;
 
 
 Uint32 t_count = 0;
@@ -230,10 +231,15 @@ void test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, C
     ccId->V_ref = ccId->V_fb; //+ (-Ls_DEFAULT*angular_E_speed*Iq_fb);
     ccIq->V_ref = ccIq->V_fb; //+ (Ls_DEFAULT*angular_E_speed*Id_fb + angular_E_speed*flux_DEFAULT);
 
+    if(angular_E_speed<400){
+        ccId->V_ref += (-Ls_DEFAULT*angular_E_speed*Iq_fb);
+        ccIq->V_ref += (Ls_DEFAULT*angular_E_speed*Id_fb + angular_E_speed*flux_DEFAULT);
+    }
+
     dq2abc(ccId->V_ref, ccIq->V_ref, angle_E_rad, &va, &vb, &vc);
 
-    //vsn = SVPWM_offset_voltage(va,vb,vc) + vdc/2;
-    vsn = vdc/2.0;
+    vsn = SVPWM_offset_voltage(va,vb,vc) + vdc/2;
+    //vsn = vdc/2.0;
     va += vsn;
     vb += vsn;
     vc += vsn;
@@ -439,7 +445,13 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         //test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, Current_Controller* ccId, Current_Controller* ccIq){
         //angle_E_rad = hall_sensor_get_E_angle_rad();
         angle_E_rad = hall_sensor_get_E_angle_rad();//get_hall_state().angle_E_rad - get_hall_state().angle_E_offset_rad;
-        test_vect_I_DQ(20, angle_E_rad, 0, &CCd, &CCq);
+
+        float32 observer_angle = angle_observer_update(angle_E_rad);
+        float32 observer_speed = get_angle_observer().Wr;
+        observer_angle = calibrate_angle_offset(observer_angle);
+
+        //angular_E_speed = hall_sensor_get_E_angular_speed();
+        test_vect_I_DQ(20, observer_angle, observer_speed, &CCd, &CCq);
         //test_control_1phase(CCtest.V_sat, &CCtest);
         //test_poll_voltage(0);
        // test_V_DQ(testvd,testvq, testangle,48);
@@ -469,7 +481,8 @@ void Ready_controller(){
     Init_3current_ADC( &control_state_update );
     Init_misc_ADC();
     Init_3phase_ePWM();
-    Init_hall_sensor(CONTROL_PRD);
+    Init_hall_sensor();
+    Init_angle_observer();
 }
 
 void Start_controller(){
