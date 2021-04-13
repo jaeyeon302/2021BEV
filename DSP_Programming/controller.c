@@ -6,6 +6,7 @@
  */
 
 #include "controller.h"
+#define NUM_OF_THROTTLE_MOVING_AVG_SAMPLES 10
 Uint32 controlCycleCount = 0;
 
 unsigned char adc_result_flag = 0x00;
@@ -15,9 +16,13 @@ const unsigned char ADC_ALL_SAMPLED = (FLAG_ADC_CURRENT_PHASE_U_SAMPLED
                                       |FLAG_ADC_THROTTLE_SAMPLED
                                       |FLAG_ADC_BATTERY_SAMPLED);
 
+
 float32 offset_voltage[4] = {0, 0, 0, 0};
 float32 phase_current_result[3]={0, 0, 0}; //[Ampere]
 float32 dq_current_result[2] = {0,0};
+float32 duty_out[3]={0,0,0};
+float32 throttle_result_samples[NUM_OF_THROTTLE_MOVING_AVG_SAMPLES];
+float32 throttle_result_temp_average=0;
 float32 throttle_result = 0; //[Ampere]
 float32 battery_level_result = 0; // 0 - 48[V]
 
@@ -27,6 +32,7 @@ Current_Controller CCd,CCq,CCtest;
 float32 testduty0 = 0.5;
 float32 testduty1 = 0.5;
 float32 testduty2 = 0.5;
+
 float32 testangle = 0;
 float32 testAlignId = 2;
 float32 freq = 1;
@@ -35,6 +41,10 @@ float32 angular_E_speed=0;
 
 
 Uint32 t_count = 0;
+
+float32 VDC = 20.0;
+byte FLAG_RUN = 0;
+
 
 float32* get_3phase_currents(){
     return phase_current_result;
@@ -205,7 +215,7 @@ void test_poll_voltage(float32 duty){
 //}
 
 void test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, Current_Controller* ccId, Current_Controller* ccIq){
-    float32 duty_out[3]={0,0,0};
+
     float32 Id_err = 0.0;
     float32 Iq_err = 0.0;
     float32 Id_fb = 0.0;
@@ -402,6 +412,7 @@ int offset_voltage_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
 
 void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage){
     float32 current = 0.0;
+    static int throttle_idx = 0;
     int on_calculating_offset = offset_voltage_update(type, adc_result_voltage);
     if(on_calculating_offset) return;
 
@@ -444,17 +455,75 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
 
         //test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, Current_Controller* ccId, Current_Controller* ccIq){
         //angle_E_rad = hall_sensor_get_E_angle_rad();
+
         angle_E_rad = hall_sensor_get_E_angle_rad();//get_hall_state().angle_E_rad - get_hall_state().angle_E_offset_rad;
 
         float32 observer_angle = angle_observer_update(angle_E_rad);
         float32 observer_speed = get_angle_observer().Wr;
         observer_angle = calibrate_angle_offset(observer_angle);
 
-        //angular_E_speed = hall_sensor_get_E_angular_speed();
-        test_vect_I_DQ(20, observer_angle, observer_speed, &CCd, &CCq);
-        //test_control_1phase(CCtest.V_sat, &CCtest);
-        //test_poll_voltage(0);
-       // test_V_DQ(testvd,testvq, testangle,48);
+        if(FLAG_RUN){
+            float32 throttle_result_avg = 0.0;
+            throttle_result_samples[throttle_idx] = throttle_result;
+            for(int i = 0; i < NUM_OF_THROTTLE_MOVING_AVG_SAMPLES;i++){
+                throttle_result_avg += throttle_result_samples[throttle_idx];
+            }
+            throttle_result_avg = throttle_result_avg / ((float32)NUM_OF_THROTTLE_MOVING_AVG_SAMPLES);
+
+            throttle_idx += 1;
+            throttle_idx = throttle_idx % NUM_OF_THROTTLE_MOVING_AVG_SAMPLES;
+
+            throttle_result_temp_average = throttle_result_avg;
+            //angular_E_speed = hall_sensor_get_E_angular_speed();
+
+            EPwm1Regs.AQCTLA.bit.CAU = 2;
+            EPwm1Regs.AQCTLA.bit.CAD = 1;
+            EPwm1Regs.DBCTL.bit.OUTSWAP = 0;
+
+            EPwm2Regs.AQCTLA.bit.CAU = 2;
+            EPwm2Regs.AQCTLA.bit.CAD = 1;
+            EPwm2Regs.DBCTL.bit.OUTSWAP = 0;
+
+            EPwm3Regs.AQCTLA.bit.CAU = 2;
+            EPwm3Regs.AQCTLA.bit.CAD = 1;
+            EPwm3Regs.DBCTL.bit.OUTSWAP = 0;
+
+            if(throttle_result_avg>2){
+                throttle_result_avg = 2;
+            }else if(throttle_result_avg < 0.1){
+                throttle_result_avg = 0;
+            }
+            CCq.I_ref = throttle_result_avg;
+            test_vect_I_DQ(VDC, observer_angle, observer_speed, &CCd, &CCq);
+            //test_control_1phase(CCtest.V_sat, &CCtest);
+            //test_poll_voltage(0);
+           // test_V_DQ(testvd,testvq, testangle,48);
+
+        }else{
+            Init_CC(&CCd, 20); // Vd_sat 40
+            Init_CC(&CCq, 20); // Vq_sat 40
+            duty_out[0]= 0;
+            duty_out[1]= 0;
+            duty_out[2]= 0;
+
+            for(int i = 0; i< NUM_OF_THROTTLE_MOVING_AVG_SAMPLES; i++){
+                throttle_result_samples[i] = 0.0;
+            }
+
+            CCq.I_ref = 0.0;
+
+            EPwm1Regs.AQCTLA.bit.CAU = 2;
+            EPwm1Regs.AQCTLA.bit.CAD = 2;
+            EPwm1Regs.DBCTL.bit.OUTSWAP = 2;
+
+            EPwm2Regs.AQCTLA.bit.CAU = 2;
+            EPwm2Regs.AQCTLA.bit.CAD = 2;
+            EPwm2Regs.DBCTL.bit.OUTSWAP = 2;
+
+            EPwm3Regs.AQCTLA.bit.CAU = 2;
+            EPwm3Regs.AQCTLA.bit.CAD = 2;
+            EPwm3Regs.DBCTL.bit.OUTSWAP = 2;
+        }
 
         adc_result_flag = 0x00; //CLEAR FLAG for next sampling
     }

@@ -9,7 +9,7 @@
 #define HALL_SENSOR_H_
 #include <F28x_Project.h>
 #include "constants.h"
-
+#include "math.h"
 
 #define ANGLE_OBSERVER_ZETA 0.707
 #define ANGLE_OBSERVER_Wn  50.0
@@ -47,7 +47,6 @@ Hall_state get_hall_state();
 Hall_state hall_sensor_update();
 void hall_sensor_set_angle_offset_rad(float64 offset_rad);
 float64 hall_sensor_get_E_angle_rad();
-float64 hall_sensor_get_M_angle_rad();
 float64 hall_sensor_get_E_angular_speed(); // rad/sec
 float64 hall_sensor_get_M_angular_speed();
 

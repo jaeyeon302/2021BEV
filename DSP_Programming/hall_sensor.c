@@ -8,6 +8,8 @@
 #include <hall_sensor.h>
 
 #define POLE_PAIR 23
+#define BOUND_PI(x)      ((x) - TWOPI * floor(((x) + PI) * INV_TWOPI))
+
 Hall_state prev_state;
 Hall_state hall_state;
 Angle_observer angle_observer;
@@ -63,27 +65,25 @@ void Init_angle_observer(){
 }
 
 float32 angle_observer_update(float32 hall_sensor_angle){
-    float32 angle_err = hall_sensor_angle - angle_observer.angle;
+    float32 angle_err = BOUND_PI(hall_sensor_angle - angle_observer.angle);
     angle_observer.Wr+= angle_observer.Ki*angle_err*update_period;
     angle_observer.angle += (angle_observer.Wr + angle_observer.Kp*angle_err)*update_period;
-
+    angle_observer.angle = BOUND_PI(angle_observer.angle);
     return angle_observer.angle;
 }
 
 float32 calibrate_angle_offset(float32 angle){
-    return angle - hall_state.angle_E_offset_rad;
+    return BOUND_PI(angle - hall_state.angle_E_offset_rad);
 }
 
 
 Hall_state hall_sensor_update(){ // Hwigon Kim
     Hall_state state;
 
-
     state.hu = GpioDataRegs.GPBDAT.bit.GPIO60;
     state.hv = GpioDataRegs.GPADAT.bit.GPIO22;
     state.hw = GpioDataRegs.GPDDAT.bit.GPIO105;
     state.angle_E_offset_rad = PI/3;
-    hall_state.bounded = false;
 
     if(state.hu & !state.hv & state.hw){
         // 1 0 1
@@ -92,7 +92,6 @@ Hall_state hall_sensor_update(){ // Hwigon Kim
     }else if(state.hu & !state.hv & !state.hw){
         // 1 0 0
         // 0 - pi/3
-        hall_state.bounded = true;
         hall_state.angle_E_rad = 0;
     }else if(state.hu & state.hv & !state.hw){
         // 1 1 0
@@ -113,6 +112,7 @@ Hall_state hall_sensor_update(){ // Hwigon Kim
     }else{
         hall_state.angle_E_rad = state.angle_E_offset_rad;
     }
+    hall_state.angle_E_rad = BOUND_PI(hall_state.angle_E_rad);
 
 
 
@@ -142,10 +142,6 @@ void hall_sensor_set_angle_offset_rad(float64 offset_rad){
 
 float64 hall_sensor_get_E_angle_rad(){
     float64 time2 = ECap1Regs.TSCTR;
-    byte hu = hall_state.hu;
-    byte hv = hall_state.hv;
-    byte hw = hall_state.hw;
-
     float64 angle;
     angle = hall_state.angle_E_rad + (t_counter*update_period)*hall_state.Wr;
     if (angle > hall_state.angle_E_rad+PI/3.0){
@@ -155,23 +151,9 @@ float64 hall_sensor_get_E_angle_rad(){
         angle = hall_state.angle_E_rad-PI/3.0;
     }
 
-    return (angle);
+    return (BOUND_PI(angle));
 }
 
-float64 hall_sensor_get_M_angle_rad(){
-    float64 electrical_angle = hall_sensor_get_E_angle_rad();
-    float64 mechanical_angle = (electrical_angle+(TWOPI*hall_state.rotation))/POLE_PAIR;
-    if(mechanical_angle > TWOPI){
-        // angle = angle - 2PI*R
-        // R = number of forward rotation
-        mechanical_angle -= ( (int64)(mechanical_angle/TWOPI))*(TWOPI);
-    }else if(mechanical_angle < 0){
-        // angle = angle + 2PI*(R+1)
-        // R = number of backward rotation
-        mechanical_angle += ( (int64)((-mechanical_angle)/TWOPI) + 1)*(TWOPI);
-    }
-    return mechanical_angle;
-}
 float64 hall_sensor_get_E_angular_speed(){
     return hall_state.Wr;
 }

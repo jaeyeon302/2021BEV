@@ -227,6 +227,7 @@ void Init_3phase_ePWM(){
     CpuSysRegs.PCLKCR2.bit.EPWM1 = 1;
 //    CpuSysRegs.PCLKCR2.bit.EPWM2 = 1;
 //    CpuSysRegs.PCLKCR2.bit.EPWM3 = 1;
+
     // TB Clocks of all ePWM modules are stopped
     CpuSysRegs.PCLKCR0.bit.TBCLKSYNC = 1;
 

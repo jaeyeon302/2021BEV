@@ -13,7 +13,7 @@
 float32 testcurrentD=0;
 float32 testcurrentQ=0;
 float32 angles[NUM_OF_RECORDS];
-float32 hall_angles[NUM_OF_RECORDS];
+float32 samples[NUM_OF_RECORDS];
 //float32 phase_currents[NUM_OF_RECORDS];
 //float32 d_currents[NUM_OF_RECORDS];
 //float32 q_currents[NUM_OF_RECORDS];
@@ -25,7 +25,6 @@ interrupt void timer0_debugging_isr(){
    if(record){
        if(i < NUM_OF_RECORDS){
            angles[i] = get_angle_observer().angle;//hall_sensor_get_E_angle_rad();//get_hall_state().angle_E_rad;
-           hall_angles[i] = hall_sensor_get_E_angle_rad();
            //phase_currents[i] = get_3phase_currents()[phaseU];
            //d_currents[i] = get_dqr_currents()[0]; // 0: d-axis, 1: q-axis
            //q_currents[i] = get_dqr_currents()[1];

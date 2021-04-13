@@ -30,7 +30,12 @@
 #define Kp_DEFAULT 62.5/1000//Ls_DEFAULT*Wc
 #define Ki_DEFAULT 62.5//Rs_DEFAULT*Wc = 50
 #define Ka_DEFAULT 1/Kp_DEFAULT
-#define CURRENT_LIMIT_SCALE 0.33 // FOR SAFETY
+#define CURRENT_LIMIT_SCALE 0.055 // FOR SAFETY
+// 0.33 -> max 12A
+// 0.15 -> max 6A
+// 0.075 -> max 3A
+// 0.055 -> max 2A
+// 0.0325 -> max 1.5A
 
 /* current sensor coefficients */
 #define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)55.0 / 1000.0) // [V/A] WCS1800
