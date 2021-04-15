@@ -8,12 +8,13 @@
  *
  */
 #include "controller.h"
-#define TIMER0_DURATION 1000 // milliseconds
+#define INITIAL_DELAY 10000000 // MICROSECONDS
+#define TIMER0_DURATION 1000000 // microseconds
 #define NUM_OF_RECORDS 300
 float32 testcurrentD=0;
 float32 testcurrentQ=0;
-float32 angles[NUM_OF_RECORDS];
-float32 samples[NUM_OF_RECORDS];
+//float32 angles[NUM_OF_RECORDS];
+//float32 samples[NUM_OF_RECORDS];
 //float32 phase_currents[NUM_OF_RECORDS];
 //float32 d_currents[NUM_OF_RECORDS];
 //float32 q_currents[NUM_OF_RECORDS];
@@ -21,10 +22,10 @@ Uint32 i = 0;
 Uint32 record = 0;
 interrupt void timer0_debugging_isr(){
     CpuTimer0.InterruptCount++;
-    test_Idq_update(testcurrentD,testcurrentQ);
+    //test_Idq_update(testcurrentD,testcurrentQ);
    if(record){
        if(i < NUM_OF_RECORDS){
-           angles[i] = get_angle_observer().angle;//hall_sensor_get_E_angle_rad();//get_hall_state().angle_E_rad;
+           //angles[i] = get_angle_observer().angle;//hall_sensor_get_E_angle_rad();//get_hall_state().angle_E_rad;
            //phase_currents[i] = get_3phase_currents()[phaseU];
            //d_currents[i] = get_dqr_currents()[0]; // 0: d-axis, 1: q-axis
            //q_currents[i] = get_dqr_currents()[1];
@@ -46,11 +47,10 @@ int main(void){
     IFR = 0x0000;
     InitPieVectTable();
 
-    DELAY_US(2000000);
+    DELAY_US(INITIAL_DELAY);
     GpioDataRegs.GPATOGGLE.bit.GPIO31 = 1;
 
     Ready_controller();
-
     EALLOW;
 
     /* SETTING TIMER0 FOR DEBUGGING */
@@ -65,7 +65,7 @@ int main(void){
     CpuSysRegs.PCLKCR0.bit.CPUTIMER0 = 1;
     CpuSysRegs.PCLKCR0.bit.CPUTIMER1 = 1;
     InitCpuTimers(); // initialize global variable CpuTimer0, CpuTimer1, CpuTimer2
-    ConfigCpuTimer(&CpuTimer0,200, 100); // timer, 200MHz(PLL CLK),
+    ConfigCpuTimer(&CpuTimer0,200, TIMER0_DURATION); // timer, 200MHz(PLL CLK),
     IER |= (M_INT13 | M_INT1); // M_INT13 = CPU TIMER1 interrupt, M_INT1 = PIE1 (to enable timer0 interrupt)
 
     PieCtrlRegs.PIECTRL.bit.ENPIE = 1; // set total PIE Enable Register

@@ -42,8 +42,11 @@ float32 angular_E_speed=0;
 
 Uint32 t_count = 0;
 
-float32 VDC = 20.0;
+float32 VDC = 48.0;
+float32 CURRENT_FAULT_LIMIT = 30.0;
+float32 CURRENT_LIMIT = 24.0;
 byte FLAG_RUN = 0;
+byte EMERGENCY_FLAG = 0;
 
 
 float32* get_3phase_currents(){
@@ -230,6 +233,7 @@ void test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, C
     dq_current_result[0] = Id_fb;
     dq_current_result[1] = Iq_fb;
 
+
     Id_err = ccId->I_ref - Id_fb;
     ccId->V_int += (ccId->ki*Id_err)/10000.0; // 10kHz time duration = 1/0000 secs
     ccId->V_fb = ccId->V_int + ccId->kp*Id_err;
@@ -337,7 +341,7 @@ void test_I_DQ(float32 vdc, float32 angle_rad, Current_Controller* ccId, Current
 //    }
 //}
 
-
+/*
 void test_control_1phase(float32 vdc, Current_Controller* cc){
     // 이 함수는 테스트를 모두 통과한 함수입니다.
     // 단상 전류 제어가 1A에서 오프셋 차이 없이 잘 되었음을 확인함.
@@ -361,7 +365,7 @@ void test_control_1phase(float32 vdc, Current_Controller* cc){
     epwm1_set_duty(duty, 1-duty); // U상
     //epwm2_set_duty(duty, 1-duty); // V상
     //epwm3_set_duty(duty, 1-duty); // W상
-}
+}*/
 
 /******************************************/
 
@@ -416,6 +420,9 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
     int on_calculating_offset = offset_voltage_update(type, adc_result_voltage);
     if(on_calculating_offset) return;
 
+
+
+
     switch(type){
     case ADCcurrentPhaseU:
         adc_result_flag |= FLAG_ADC_CURRENT_PHASE_U_SAMPLED;
@@ -462,7 +469,33 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
         float32 observer_speed = get_angle_observer().Wr;
         observer_angle = calibrate_angle_offset(observer_angle);
 
-        if(FLAG_RUN){
+        FLAG_RUN = GpioDataRegs.GPCDAT.bit.GPIO66;
+
+        if( (offset_voltage[phaseU] < 1.2)
+            || (offset_voltage[phaseV] < 1.2)
+            || (offset_voltage[phaseW] < 1.2) ){
+            EMERGENCY_FLAG = 1;
+        }
+
+        if( (phase_current_result[phaseU] > CURRENT_FAULT_LIMIT)
+            || (phase_current_result[phaseV] > CURRENT_FAULT_LIMIT)
+            || (phase_current_result[phaseW] > CURRENT_FAULT_LIMIT) ){
+            EMERGENCY_FLAG = 1;
+        }
+
+        if( (phase_current_result[phaseU] < -CURRENT_FAULT_LIMIT)
+            || (phase_current_result[phaseV] < -CURRENT_FAULT_LIMIT)
+            || (phase_current_result[phaseW] < -CURRENT_FAULT_LIMIT) ){
+            EMERGENCY_FLAG = 1;
+        }
+
+        if(EMERGENCY_FLAG){
+            GpioDataRegs.GPACLEAR.bit.GPIO31 = 1;
+        }
+
+
+
+        if(FLAG_RUN && !EMERGENCY_FLAG){
             float32 throttle_result_avg = 0.0;
             throttle_result_samples[throttle_idx] = throttle_result;
             for(int i = 0; i < NUM_OF_THROTTLE_MOVING_AVG_SAMPLES;i++){
@@ -488,11 +521,12 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
             EPwm3Regs.AQCTLA.bit.CAD = 1;
             EPwm3Regs.DBCTL.bit.OUTSWAP = 0;
 
-            if(throttle_result_avg>2){
-                throttle_result_avg = 2;
-            }else if(throttle_result_avg < 0.1){
+            if(throttle_result_avg>CURRENT_LIMIT){
+                throttle_result_avg = CURRENT_LIMIT;
+            }else if(throttle_result_avg < 0.2){
                 throttle_result_avg = 0;
             }
+
             CCq.I_ref = throttle_result_avg;
             test_vect_I_DQ(VDC, observer_angle, observer_speed, &CCd, &CCq);
             //test_control_1phase(CCtest.V_sat, &CCtest);
@@ -500,6 +534,8 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
            // test_V_DQ(testvd,testvq, testangle,48);
 
         }else{
+
+
             Init_CC(&CCd, 20); // Vd_sat 40
             Init_CC(&CCq, 20); // Vq_sat 40
             duty_out[0]= 0;
@@ -552,6 +588,15 @@ void Ready_controller(){
     Init_3phase_ePWM();
     Init_hall_sensor();
     Init_angle_observer();
+
+
+    // ready FLAG_RUN switch
+    GpioCtrlRegs.GPCGMUX1.bit.GPIO66 = 0; // use GPIO60 as gpio
+    GpioCtrlRegs.GPCMUX1.bit.GPIO66 = 0;
+    GpioCtrlRegs.GPCDIR.bit.GPIO66 = 0; // GPIO FOR INPUT
+    GpioCtrlRegs.GPCQSEL1.bit.GPIO66 = 0x0; // Input Qualification type - Sync
+
+
 }
 
 void Start_controller(){
