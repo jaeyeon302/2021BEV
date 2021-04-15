@@ -245,7 +245,7 @@ void test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, C
     ccId->V_ref = ccId->V_fb; //+ (-Ls_DEFAULT*angular_E_speed*Iq_fb);
     ccIq->V_ref = ccIq->V_fb; //+ (Ls_DEFAULT*angular_E_speed*Id_fb + angular_E_speed*flux_DEFAULT);
 
-    if(angular_E_speed<400){
+    if(angular_E_speed<2000){
         ccId->V_ref += (-Ls_DEFAULT*angular_E_speed*Iq_fb);
         ccIq->V_ref += (Ls_DEFAULT*angular_E_speed*Id_fb + angular_E_speed*flux_DEFAULT);
     }
