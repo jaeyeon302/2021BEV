@@ -30,7 +30,8 @@
 #define Kp_DEFAULT 62.5/1000//Ls_DEFAULT*Wc
 #define Ki_DEFAULT 62.5//Rs_DEFAULT*Wc = 50
 #define Ka_DEFAULT 1/Kp_DEFAULT
-#define CURRENT_LIMIT_SCALE 0.66 // FOR SAFETY
+#define CURRENT_LIMIT_SCALE 0.75 // FOR SAFETY
+// 0.99 -> max 36A
 // 0.75 -> max 30A
 // 0.66 -> max 24A
 // 0.55 -> max 20A
