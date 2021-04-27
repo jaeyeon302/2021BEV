@@ -42,9 +42,10 @@ float32 angular_E_speed=0;
 
 Uint32 t_count = 0;
 
+/****** controller constants *********/
 float32 VDC = 48.0;
-float32 CURRENT_FAULT_LIMIT = 35.0;
-float32 CURRENT_LIMIT = 30.0;
+float32 CURRENT_FAULT_LIMIT = 40.0;
+float32 CURRENT_LIMIT = 35.0;
 byte FLAG_RUN = 0;
 byte EMERGENCY_FLAG = 0;
 
