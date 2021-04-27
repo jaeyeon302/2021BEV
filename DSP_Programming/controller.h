@@ -43,7 +43,8 @@
 // 0.0325 -> max 1.5A
 
 /* current sensor coefficients */
-#define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)55.0 / 1000.0) // [V/A] WCS1800
+// #define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)55.0 / 1000.0) // [V/A] WCS1800
+#define CURRENT_SENSOR_VOLTAGE_SLOPE ((float32)30.0 / 1000.0) // [V/A] WCS1700
 //#define CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO 1.95 //1.65 //[V]
 
 /* Battery Coefficients */
