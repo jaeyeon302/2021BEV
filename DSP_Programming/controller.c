@@ -474,19 +474,22 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
 
         if( (offset_voltage[phaseU] < 1.2)
             || (offset_voltage[phaseV] < 1.2)
-            || (offset_voltage[phaseW] < 1.2) ){
+             ){
+            /*|| (offset_voltage[phaseW] < 1.2)*/
             EMERGENCY_FLAG = 1;
         }
 
         if( (phase_current_result[phaseU] > CURRENT_FAULT_LIMIT)
             || (phase_current_result[phaseV] > CURRENT_FAULT_LIMIT)
-            || (phase_current_result[phaseW] > CURRENT_FAULT_LIMIT) ){
+            ){
+            /*|| (phase_current_result[phaseW] > CURRENT_FAULT_LIMIT)*/
             EMERGENCY_FLAG = 1;
         }
 
         if( (phase_current_result[phaseU] < -CURRENT_FAULT_LIMIT)
             || (phase_current_result[phaseV] < -CURRENT_FAULT_LIMIT)
-            || (phase_current_result[phaseW] < -CURRENT_FAULT_LIMIT) ){
+           ){
+            /* || (phase_current_result[phaseW] < -CURRENT_FAULT_LIMIT) */
             EMERGENCY_FLAG = 1;
         }
 
