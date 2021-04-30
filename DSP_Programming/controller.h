@@ -21,14 +21,14 @@
 
 /* motor coefficients */
 #define Ls_DEFAULT ((float32)0.1/1000) //[H]
-#define Rs_DEFAULT ((float32)0.1) // [Ohm]
-#define flux_DEFAULT 0.0227
+#define Rs_DEFAULT ((float32)0.025) //eepel's motor [ohm]   ((float32)0.1) inwheel motor // [Ohm]
+#define flux_DEFAULT 0.03// eepel's motor //0.0227 inwheel motor
 
 /* control coefficients */
 // ±è»óÈÆ Àú ) ¸ðÅÍÁ¦¾î 119, 145 page
 #define Wc 625 // 2*PI*f
-#define Kp_DEFAULT 62.5/1000//Ls_DEFAULT*Wc
-#define Ki_DEFAULT 62.5//Rs_DEFAULT*Wc = 50
+#define Kp_DEFAULT (Ls_DEFAULT*Wc)  // 62.5/1000//Ls_DEFAULT*Wc
+#define Ki_DEFAULT (Rs_DEFAULT*Wc) //62.5//Rs_DEFAULT*Wc = 50
 #define Ka_DEFAULT 1/Kp_DEFAULT
 #define CURRENT_LIMIT_SCALE 0.75 // FOR SAFETY
 // 0.99 -> max 36A
@@ -48,7 +48,7 @@
 //#define CURRENT_SENSOR_VOLTAGE_OFFSET_FOR_ZERO 1.95 //1.65 //[V]
 
 /* Battery Coefficients */
-#define BAT_DEFAULT_VOLTAGE 48.0 // [V]
+#define BAT_DEFAULT_VOLTAGE 24.0 //48.0 // [V]
 #define BAT_VOLTAGE_SCALER ((float32)BAT_DEFAULT_VOLTAGE/3.3) //
 
 /* ADC coefficients and flags */

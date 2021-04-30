@@ -20,9 +20,10 @@ float32 testcurrentQ=0;
 //float32 q_currents[NUM_OF_RECORDS];
 Uint32 i = 0;
 Uint32 record = 0;
+
 interrupt void timer0_debugging_isr(){
     CpuTimer0.InterruptCount++;
-    //test_Idq_update(testcurrentD,testcurrentQ);
+    test_Idq_update(testcurrentD,testcurrentQ);
    if(record){
        if(i < NUM_OF_RECORDS){
            //angles[i] = get_angle_observer().angle;//hall_sensor_get_E_angle_rad();//get_hall_state().angle_E_rad;
@@ -32,6 +33,7 @@ interrupt void timer0_debugging_isr(){
            i++;
        }
    }
+
     GpioDataRegs.GPATOGGLE.bit.GPIO31 = 1; //flip the led state0
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1; // clear PIEACK.1 == PIEACK switch closed
 }

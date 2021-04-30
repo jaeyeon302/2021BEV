@@ -33,6 +33,8 @@ float32 testduty0 = 0.5;
 float32 testduty1 = 0.5;
 float32 testduty2 = 0.5;
 
+
+float32 unit_angle = 0;
 float32 testangle = 0;
 float32 testAlignId = 2;
 float32 freq = 1;
@@ -43,7 +45,7 @@ float32 angular_E_speed=0;
 Uint32 t_count = 0;
 
 /****** controller constants *********/
-float32 VDC = 48.0;
+float32 VDC = BAT_DEFAULT_VOLTAGE;
 float32 CURRENT_FAULT_LIMIT = 40.0;
 float32 CURRENT_LIMIT = 35.0;
 byte FLAG_RUN = 0;
@@ -73,8 +75,17 @@ void Init_CC(Current_Controller* cc, float32 v_sat ){
     cc->kff = 0.0;
 }
 void abc2dq(float32 a, float32 b, float32 c, float32 angle_rad,float32* d, float32* q){
-    *d=(2.0/3.0)*(cos(angle_rad)*a + cos(angle_rad-2.0*PI/3.0)*b + cos(angle_rad+2.0*PI/3.0)*c);
-    *q=(2.0/3.0)*(-sin(angle_rad)*a - sin(angle_rad-2.0*PI/3.0)*b - sin(angle_rad+2.0*PI/3.0)*c);
+    float32 ds = a;
+    float32 qs = 1/sqrt(3)*(b-c);
+
+    float32 dr = ds*cos(angle_rad)+qs*sin(angle_rad);
+    float32 qr = qs*cos(angle_rad)-ds*sin(angle_rad);
+
+    *d = dr;
+    *q = qr;
+
+//    *d=(2.0/3.0)*( cosf(angle_rad)*a + cosf(angle_rad-2.0*PI/3.0)*b + cosf(angle_rad+2.0*PI/3.0)*c);
+//    *q=(2.0/3.0)*( -sinf(angle_rad)*a - sinf(angle_rad-2.0*PI/3.0)*b - sinf(angle_rad+2.0*PI/3.0)*c);
 }
 void dq2abc(float32 d, float32 q, float32 angle_rad, float32* a, float32* b ,float32* c){
     *a = cos(angle_rad)*d - sin(angle_rad)*q;
@@ -246,7 +257,7 @@ void test_vect_I_DQ(float32 vdc, float32 angle_E_rad, float32 angular_E_speed, C
     ccId->V_ref = ccId->V_fb; //+ (-Ls_DEFAULT*angular_E_speed*Iq_fb);
     ccIq->V_ref = ccIq->V_fb; //+ (Ls_DEFAULT*angular_E_speed*Id_fb + angular_E_speed*flux_DEFAULT);
 
-    if(angular_E_speed<2000){
+    if(angular_E_speed<500){
         ccId->V_ref += (-Ls_DEFAULT*angular_E_speed*Iq_fb);
         ccIq->V_ref += (Ls_DEFAULT*angular_E_speed*Id_fb + angular_E_speed*flux_DEFAULT);
     }
@@ -531,10 +542,12 @@ void control_state_update(enum ADC_RESULT_TYPE type, float32 adc_result_voltage)
                 throttle_result_avg = 0;
             }
 
-            CCq.I_ref = throttle_result_avg;
+            //CCq.I_ref = throttle_result_avg;
+            //test_angle_update(unit_angle*PI/180);
+            //test_vect_I_DQ(VDC, testangle, observer_speed, &CCd, &CCq);
             test_vect_I_DQ(VDC, observer_angle, observer_speed, &CCd, &CCq);
             //test_control_1phase(CCtest.V_sat, &CCtest);
-            //test_poll_voltage(0);
+//            test_poll_voltage(0);
            // test_V_DQ(testvd,testvq, testangle,48);
 
         }else{

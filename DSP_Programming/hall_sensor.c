@@ -83,7 +83,7 @@ Hall_state hall_sensor_update(){ // Hwigon Kim
     state.hu = GpioDataRegs.GPBDAT.bit.GPIO60;
     state.hv = GpioDataRegs.GPADAT.bit.GPIO22;
     state.hw = GpioDataRegs.GPDDAT.bit.GPIO105;
-    state.angle_E_offset_rad = PI/3;
+    state.angle_E_offset_rad = 4.5; //PI/3;
 
     if(state.hu & !state.hv & state.hw){
         // 1 0 1
