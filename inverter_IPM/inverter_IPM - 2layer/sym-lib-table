@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name inverter_IPM-rescue)(type Legacy)(uri ${KIPRJMOD}/inverter_IPM-rescue.lib)(options "")(descr ""))
+)
