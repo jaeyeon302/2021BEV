@@ -6,7 +6,7 @@ Department of Electrical and Conputer Engineering, Seoul National University
 
 ## Demo Video
 
-### [Test driving 1 : Seoul National University Campus Road (youtube video)](https://youtu.be/eKn_GJneaUU)
+### [Test driving 1 : Seoul National University Campus Road (youtube video)](https://youtu.be/YFAJCFfAURw)
 - Path length : 4.06Km
 - Maximum slope : 7%
 - Maximum speed : 30.5km/h
