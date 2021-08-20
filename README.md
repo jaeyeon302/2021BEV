@@ -20,7 +20,7 @@ Department of Electrical and Conputer Engineering, Seoul National University
 
 ### Inverter
 - 4 layer PCB artwork (1oz 2oz 2oz 1oz) 
-- Used IPM([NFAL5065L4B](https://kr.mouser.com/datasheet/2/308/1/NFAL5065L4B_D-2317681.pdf)) as the power MOSFET switch
+- Used IPM([NFAL5065L4B](https://kr.mouser.com/datasheet/2/308/1/NFAL5065L4B_D-2317681.pdf)) as the power IGBT switch
 - Electrically isolated control board area from the High Power Area including IPM and DC link
 
 ### DSP - controller
